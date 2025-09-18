@@ -519,8 +519,6 @@ def test_azure_api_key_connection():
         print(f"✗ API Key test failed: {e}")
         return False
 
-# Uncomment to test:
-# test_azure_api_key_connection()
 
 class ClearChat2(View):
     def post(self, request):
