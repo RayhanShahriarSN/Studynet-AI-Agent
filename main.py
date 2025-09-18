@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
 # Load environment variables from .env file
-load_dotenv()
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
