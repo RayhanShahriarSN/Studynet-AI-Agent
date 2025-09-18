@@ -23,6 +23,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import hashlib
 from datetime import datetime
+from dotenv import load_dotenv
+
 
 
 FASTAPI_URL = "http://127.0.0.1:8000"  # FastAPI backend URL
@@ -319,11 +321,11 @@ class UploadPDF(View):
 
 
 SESSION_KEY = "chat_history"
+load_dotenv()
 
-# Azure OpenAI settings
-ENDPOINT = os.getenv("ENDPOINT_URL", "https://studynet-ai-agent.openai.azure.com/")
-DEPLOYMENT = os.getenv("DEPLOYMENT_NAME", "chat-heavy")
-API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "EZFRKMlQvMguHWxd4ymVjQdb5JVds9OhN5PXD3zS3dWIhfFCBpk0JQQJ99BIACL93NaXJ3w3AAAAACOGovff")
+API_KEY = os.getenv("AZURE_API_KEY")
+ENDPOINT = os.getenv("AZURE_ENDPOINT")
+DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT")
 
 class QnAPage2(View):
     template_name = "QnA2.html"
@@ -539,9 +541,9 @@ class ClearChatPhi(View):
 SESSION_KEY = "chat_history"
 
 # Azure OpenAI settings
-ENDPOINT = os.getenv("ENDPOINT_URL", "https://studynet-ai-agent.openai.azure.com/")
-DEPLOYMENT = os.getenv("DEPLOYMENT_NAME", "chat-heavy")
-API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "EZFRKMlQvMguHWxd4ymVjQdb5JVds9OhN5PXD3zS3dWIhfFCBpk0JQQJ99BIACL93NaXJ3w3AAAAACOGovff")
+API_KEY = os.getenv("AZURE_API_KEY")
+ENDPOINT = os.getenv("AZURE_ENDPOINT")
+DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT")
 
 class QnAPagePhi(View):
     template_name = "QnA_phi.html"
