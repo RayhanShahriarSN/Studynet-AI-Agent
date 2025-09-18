@@ -324,8 +324,13 @@ SESSION_KEY = "chat_history"
 load_dotenv()
 
 API_KEY = os.getenv("AZURE_API_KEY")
+os.environ["AZURE_API_KEY"] = API_KEY
+
 ENDPOINT = os.getenv("AZURE_ENDPOINT")
+os.environ["AZURE_ENDPOINT"] = ENDPOINT
+
 DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT")
+os.environ["AZURE_DEPLOYMENT"] = DEPLOYMENT
 
 class QnAPage2(View):
     template_name = "QnA2.html"
