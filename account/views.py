@@ -75,10 +75,10 @@ class UserProfileView(APIView):
 #Frontend
 
 def login_page(request):
-    return render(request, "login.html")
+    return render(request, "login2.html")
 
 def signup_page(request):
-    return render(request, "signup.html")
+    return render(request, "signup2.html")
 
 
 
@@ -106,7 +106,7 @@ def login_page(request):
     else:
         form = LoginForm()
 
-    return render(request, "login.html", {"form": form})
+    return render(request, "login2.html", {"form": form})
 
 
 
@@ -126,16 +126,16 @@ def signup_page(request):
 
             if password != password2:
                 messages.error(request, "Passwords do not match ❌")
-                return render(request, "signup.html", {"form": form})
+                return render(request, "signup2.html", {"form": form})
 
             # Check if username or email already exists
             if User.objects.filter(username=username).exists():
                 messages.error(request, "Username already exists ❌")
-                return render(request, "signup.html", {"form": form})
+                return render(request, "signup2.html", {"form": form})
             
             if User.objects.filter(email=email).exists():
                 messages.error(request, "Email already exists ❌")
-                return render(request, "signup.html", {"form": form})
+                return render(request, "signup2.html", {"form": form})
 
             # Create Django user using custom model
             User.objects.create_user(username=username, email=email, password=password)
@@ -144,7 +144,7 @@ def signup_page(request):
     else:
         form = SignUpForm()
 
-    return render(request, "signup.html", {"form": form})
+    return render(request, "signup2.html", {"form": form})
 
 
 
