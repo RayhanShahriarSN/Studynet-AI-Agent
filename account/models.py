@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
+from django.conf import settings
 
 class UserManager(BaseUserManager):
     def create_user(self, username, email, password=None):
@@ -38,6 +39,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser):
     username = models.CharField(max_length=100, unique=True )  # NEW username field
     email = models.EmailField(verbose_name='Email', max_length=255, unique=True)
+    tokens_used = models.PositiveIntegerField(default=0)
  
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
@@ -61,3 +63,9 @@ class User(AbstractBaseUser):
     @property
     def is_staff(self):
         return self.is_admin
+
+
+
+
+
+    
