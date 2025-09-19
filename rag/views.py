@@ -24,6 +24,8 @@ import numpy as np
 import hashlib
 from datetime import datetime
 from dotenv import load_dotenv
+from django.views.decorators.csrf import csrf_protect
+from django.utils.decorators import method_decorator
 
 
 
@@ -548,8 +550,9 @@ API_KEY = os.getenv("AZURE_API_KEY")
 ENDPOINT = os.getenv("AZURE_ENDPOINT")
 DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT")
 
+@method_decorator(csrf_protect, name='dispatch')
 class QnAPagePhi(View):
-    template_name = "QnA_phi.html"
+    template_name = "QnA_user.html"
 
     def __init__(self):
         super().__init__()
@@ -645,7 +648,12 @@ class QnAPagePhi(View):
             raise Exception(f"Azure OpenAI error {response.status_code}: {response.text}")
 
         result = response.json()
-        return result["choices"][0]["message"]["content"]
+        content = result["choices"][0]["message"]["content"]
+        total_tokens_used = result.get("usage", {}).get("total_tokens", 0) #if missing, 0 will be set
+        return content, total_tokens_used
+    
+
+    
 
     def get(self, request):
         ask_form = QuestionForm()
@@ -664,33 +672,61 @@ class QnAPagePhi(View):
             question = ask_form.cleaned_data["question"]
             chat.append({"who": "user", "text": question})
 
-            try:
-               
-                relevant_texts = []
-                for pdf in self.pdf_texts:
-                    if any(word.lower() in pdf['content'].lower() for word in question.split()):
-                        relevant_texts.append(f"{pdf['filename']}:\n{pdf['content']}")
+            if request.user.tokens_used > 1000000:
+                chat.append({"who": "bot", "text": "❌ You have exceeded your token limit and cannot ask further questions."})
+                return render(request, self.template_name, {
+                "ask_form": QuestionForm(),
+                "chat": chat,
+                "status_msg": "Token limit reached"
+            })
+            
+            else:
 
-                context = "\n\n".join(relevant_texts) or "No relevant content found in PDFs."
+                try:
+                
+                    relevant_texts = []
+                    for pdf in self.pdf_texts:
+                        if any(word.lower() in pdf['content'].lower() for word in question.split()):
+                            relevant_texts.append(f"{pdf['filename']}:\n{pdf['content']}")
 
-                # Step 2: Ask Azure OpenAI via REST API
-                answer = self._ask_azure_openai(question, context)
-                answer_clean = self.clean_response_text(answer)
-                chat.append({"who": "bot", "text": answer_clean})
+                    context = "\n\n".join(relevant_texts) or "No relevant content found in PDFs."
 
-            except Exception as e:
-                error_msg = f"Azure OpenAI error: {e}"
-                chat.append({"who": "bot", "text": error_msg})
-                django_messages.error(request, error_msg)
+                    
+                    # Step 2: Ask Azure OpenAI via REST API
+                    answer, new_tokens = self._ask_azure_openai(question, context)
 
-            # Save chat session
-            request.session[SESSION_KEY] = chat
-            request.session.modified = True
+                    request.user.tokens_used = request.user.tokens_used + new_tokens
+                    print(request.user.tokens_used)
+                    request.user.save()
+
+                    if 908000 < request.user.tokens_used <= 1000000:
+                        chat.append({"who": "bot", "text": "Warning! you have used {request.user.tokens_used} tokens. You are close to your token limit"})
+
+                    elif request.user.tokens_used > 1000000:
+                        chat.append({"who": "bot", "text": "❌ You have exceeded your token limit and cannot ask further questions."})
+                        return render(request, self.template_name, {
+                        "ask_form": QuestionForm(),
+                        "chat": chat,
+                        "status_msg": "Token limit reached"
+                        })
+                    
+                    else:
+                        answer_clean = self.clean_response_text(answer)
+                        chat.append({"who": "bot", "text": answer_clean})
+
+                except Exception as e:
+                    error_msg = f"Azure OpenAI error: {e}"
+                    chat.append({"who": "bot", "text": error_msg})
+                    django_messages.error(request, error_msg)
+
+                # Save chat session
+                request.session[SESSION_KEY] = chat
+                request.session.modified = True
 
         return render(request, self.template_name, {
-            "ask_form": QuestionForm(),
-            "chat": chat,
-            "status_msg": "Backend ready" if API_KEY else "Azure API key missing"
+                "ask_form": QuestionForm(),
+                "chat": chat,
+                "status_msg": "Backend ready" if API_KEY else "Azure API key missing"
         })
     
 
