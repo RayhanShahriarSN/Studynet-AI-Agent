@@ -17,6 +17,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_protect
+from django.utils.decorators import method_decorator
 
 
 
@@ -83,7 +85,7 @@ def signup_page(request):
 
 
 
-
+@csrf_protect
 def login_page(request):
     if request.method == "POST":
         form = LoginForm(request.POST)
@@ -94,11 +96,11 @@ def login_page(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)  # logs in the user
-                messages.success(request, "✅ Logged in successfully!")
+                #messages.success(request, "✅ Logged in successfully!")
 
                 # Redirect based on role
                 if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
-                    return redirect("rag_qna_page_admin")
+                    return redirect("rag_qna_page_phi_admin")
                 else:
                     return redirect("rag_qna_page_phi")
             else:
@@ -115,6 +117,7 @@ def login_page(request):
 
 User = get_user_model()  # Use custom user model
 
+@csrf_protect
 def signup_page(request):
     if request.method == "POST":
         form = SignUpForm(request.POST)
@@ -164,3 +167,11 @@ def qna_page(request):
 @login_required
 def admin_page(request):
     return render(request, "admin_dashboard.html")
+
+
+
+@csrf_protect
+def logout_page(request):
+    logout(request)  
+    #messages.success(request, "✅ You have been logged out successfully!")
+    return redirect("login_page")
