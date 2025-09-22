@@ -276,7 +276,7 @@ class ClearChat_admin(View):
 RAG_PDF_DIR = settings.RAG_PDF_DIR
 
 class UploadPDF(View):
-    template_name = "uploadPDF.html"
+    template_name = "uploadPDF2.html"
    
 
     def get(self, request):
@@ -672,7 +672,7 @@ class QnAPagePhi(View):
             question = ask_form.cleaned_data["question"]
             chat.append({"who": "user", "text": question})
 
-            if request.user.tokens_used > 1000000:
+            if request.user.tokens_used > 20000:
                 chat.append({"who": "bot", "text": "❌ You have exceeded your token limit and cannot ask further questions."})
                 return render(request, self.template_name, {
                 "ask_form": QuestionForm(),
@@ -699,10 +699,9 @@ class QnAPagePhi(View):
                     print(request.user.tokens_used)
                     request.user.save()
 
-                    if 908000 < request.user.tokens_used <= 1000000:
-                        chat.append({"who": "bot", "text": "Warning! you have used {request.user.tokens_used} tokens. You are close to your token limit"})
+                   
 
-                    elif request.user.tokens_used > 1000000:
+                    if request.user.tokens_used > 20000:
                         chat.append({"who": "bot", "text": "❌ You have exceeded your token limit and cannot ask further questions."})
                         return render(request, self.template_name, {
                         "ask_form": QuestionForm(),
@@ -731,4 +730,166 @@ class QnAPagePhi(View):
     
 
 
+@method_decorator(csrf_protect, name='dispatch')
+class QnAPagePhi_admin(View):
+    template_name = "QnA_admin2.html"
+
+    def __init__(self):
+        super().__init__()
+        self.pdf_texts = self._load_all_pdfs()
+
+    def _load_all_pdfs(self):
+        
+        texts = []
+        if not PDF_DIR.exists():
+            return texts
+
+        for pdf_file in PDF_DIR.glob("*.pdf"):
+            try:
+                with open(pdf_file, "rb") as f:
+                    reader = PyPDF2.PdfReader(f)
+                    pdf_text = ""
+                    for page in reader.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            pdf_text += page_text + "\n"
+                    texts.append({"filename": pdf_file.name, "content": pdf_text})
+            except Exception as e:
+                print(f"Failed to read {pdf_file.name}: {e}")
+        return texts
+
+
+    def clean_response_text(self, text):
+        """Clean AI response: remove markdown, HTML, tables, preserve bullets and numbered lists."""
+        if not text:
+            return text
+
+        # Remove markdown bold/italic
+        text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+        text = re.sub(r'\*(.*?)\*', r'\1', text)
+        text = re.sub(r'__(.*?)__', r'\1', text)
+        text = re.sub(r'_(.*?)_', r'\1', text)
+
+        # Remove headers
+        text = re.sub(r'#{1,6}\s*(.*?)$', r'\1', text, flags=re.MULTILINE)
+
+        # Remove inline code and code blocks
+        text = re.sub(r'`{3}[\s\S]*?`{3}', '', text)
+        text = re.sub(r'`(.*?)`', r'\1', text)
+
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', text)
+
+        # Remove Markdown tables
+        text = re.sub(r'\|.*?\|', '', text)  # Remove table rows
+        text = re.sub(r'-{3,}', '', text)    # Remove table separators
+
+        # Replace bullets with simple •
+        text = re.sub(r'^[-•*]\s*', r'• ', text, flags=re.MULTILINE)
+
+        # Ensure numbered lists are on new lines
+        text = re.sub(r'(\d+)\.\s*', r'\n\1. ', text)
+
+        # Collapse multiple blank lines into one
+        text = re.sub(r'\n\s*\n+', '\n\n', text)
+
+        # Strip leading/trailing spaces
+        text = text.strip()
+
+        return text
+
+
+
+
+    def _ask_azure_openai(self, question, context):
+        
+        if not ENDPOINT or not DEPLOYMENT or not API_KEY:
+            raise ValueError("Azure OpenAI configuration missing. Check ENDPOINT, DEPLOYMENT, and API_KEY.")
+
+       
+        url = f"{ENDPOINT.rstrip('/')}/openai/deployments/{DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview"
+        headers = {
+            "api-key": API_KEY,
+            "Content-Type": "application/json"
+        }
+        data = {
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant. Answer based on the provided PDF content. Provide the output in plain text only, do not use tables or Markdown tables. Use bullets or numbered lists instead."},
+                {"role": "user", "content": f"PDF Content:\n{context}\n\nQuestion: {question}"}
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.7
+        }
+
+        print(f"Sending request to Azure OpenAI at {url} ...")
+        response = requests.post(url, headers=headers, json=data)
+
+        if response.status_code != 200:
+            raise Exception(f"Azure OpenAI error {response.status_code}: {response.text}")
+
+        result = response.json()
+        content = result["choices"][0]["message"]["content"]
+        total_tokens_used = result.get("usage", {}).get("total_tokens", 0) #if missing, 0 will be set
+        return content, total_tokens_used
+    
+
+    
+
+    def get(self, request):
+        ask_form = QuestionForm()
+        chat = request.session.get(SESSION_KEY, [])
+        return render(request, self.template_name, {
+            "ask_form": ask_form,
+            "chat": chat,
+            "status_msg": "Backend ready" if API_KEY else "Azure API key missing"
+        })
+
+    def post(self, request):
+        ask_form = QuestionForm(request.POST)
+        chat = request.session.get(SESSION_KEY, [])
+
+        if ask_form.is_valid():
+            question = ask_form.cleaned_data["question"]
+            chat.append({"who": "user", "text": question})
+
+            
+            try:
+                
+                    relevant_texts = []
+                    for pdf in self.pdf_texts:
+                        if any(word.lower() in pdf['content'].lower() for word in question.split()):
+                            relevant_texts.append(f"{pdf['filename']}:\n{pdf['content']}")
+
+                    context = "\n\n".join(relevant_texts) or "No relevant content found in PDFs."
+
+                    
+                    # Step 2: Ask Azure OpenAI via REST API
+                    answer, new_tokens = self._ask_azure_openai(question, context)
+
+                    request.user.tokens_used = request.user.tokens_used + new_tokens
+                    print(request.user.tokens_used)
+                    request.user.save()
+
+    
+                    answer_clean = self.clean_response_text(answer)
+                    chat.append({"who": "bot", "text": answer_clean})
+
+            except Exception as e:
+                    error_msg = f"Azure OpenAI error: {e}"
+                    chat.append({"who": "bot", "text": error_msg})
+                    django_messages.error(request, error_msg)
+
+                # Save chat session
+            request.session[SESSION_KEY] = chat
+            request.session.modified = True
+
+        return render(request, self.template_name, {
+                "ask_form": QuestionForm(),
+                "chat": chat,
+                "status_msg": "Backend ready" if API_KEY else "Azure API key missing"
+        })
+    
+
+
+    
     

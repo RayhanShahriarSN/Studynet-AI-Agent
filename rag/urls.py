@@ -1,6 +1,6 @@
 # rag/urls.py
 from django.urls import path
-from .views import QnAPage, ConfigureLLM, ClearChat, UploadPDF, QnAPage_admin, ConfigureLLM_admin, ClearChat_admin, QnAPage2,QnAPagePhi,ClearChat2,ClearChatPhi
+from .views import QnAPage, ConfigureLLM, ClearChat, UploadPDF, QnAPage_admin, ConfigureLLM_admin, ClearChat_admin, QnAPage2,QnAPagePhi,ClearChat2,ClearChatPhi, QnAPagePhi_admin
 
 urlpatterns = [
 
@@ -14,6 +14,7 @@ urlpatterns = [
     path("upload-pdf/", UploadPDF.as_view(), name="upload_pdf"),
     path("qna/admin/", QnAPage_admin.as_view(), name = "rag_qna_page_admin"),
     path("qna2/", QnAPage2.as_view(), name="rag_qna_page2"),
-    path("qna/phi", QnAPagePhi.as_view(), name="rag_qna_page_phi")
+    path("qna/phi", QnAPagePhi.as_view(), name="rag_qna_page_phi"),
+    path("qna/phi/admin", QnAPagePhi_admin.as_view(), name="rag_qna_page_phi_admin")
    
 ]
