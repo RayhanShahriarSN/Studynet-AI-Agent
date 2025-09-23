@@ -108,7 +108,7 @@ rag_backend/
 │   ├── js/app.js               # Frontend JavaScript
 │   └── images/                 # Images and icons
 ├── templates/                  # Django templates
-├── rag_backend/                # Django project settings
+├── config/                     # Django project settings
 │   ├── __init__.py
 │   ├── settings.py             # Main settings
 │   ├── urls.py                 # Main URL routing
