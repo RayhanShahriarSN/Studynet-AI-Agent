@@ -160,6 +160,92 @@
         </div>
     </div>
 
+    <!-- Developer Mode Toggle -->
+    <button id="developerToggle" class="developer-toggle" title="Developer Mode">
+        <i class="fas fa-code"></i>
+    </button>
+
+    <!-- Developer Mode Panel -->
+    <div id="developerMode" class="developer-mode">
+        <div class="developer-header">
+            <h2><i class="fas fa-code"></i> Developer Mode</h2>
+            <p>Advanced tools and debugging features</p>
+            <button class="dev-close" id="closeDeveloperMode">&times;</button>
+        </div>
+        
+        <div class="developer-content">
+            <!-- Memory Management Section -->
+            <div class="dev-section">
+                <h3><i class="fas fa-memory"></i> Memory Management</h3>
+                <input type="text" id="devSessionId" class="dev-input" placeholder="Session ID (optional)">
+                <button class="dev-button" id="getMemory">
+                    <i class="fas fa-download"></i> Get Memory for Session
+                </button>
+                <button class="dev-button danger" id="clearMemory">
+                    <i class="fas fa-trash"></i> Clear Session Memory
+                </button>
+                <button class="dev-button" id="listSessions">
+                    <i class="fas fa-list"></i> List All Sessions
+                </button>
+                <div id="memoryOutput" class="dev-output" style="display: none;"></div>
+            </div>
+
+            <!-- Knowledge Base Section -->
+            <div class="dev-section">
+                <h3><i class="fas fa-database"></i> Knowledge Base</h3>
+                <button class="dev-button" id="getKbStatus">
+                    <i class="fas fa-info-circle"></i> Knowledge Base Status
+                </button>
+                <button class="dev-button success" id="reloadKb">
+                    <i class="fas fa-sync"></i> Reload Knowledge Base
+                </button>
+                <button class="dev-button danger" id="clearVectorStore">
+                    <i class="fas fa-broom"></i> Clear Vector Store
+                </button>
+                <div id="kbOutput" class="dev-output" style="display: none;"></div>
+            </div>
+
+            <!-- System Metrics Section -->
+            <div class="dev-section">
+                <h3><i class="fas fa-chart-bar"></i> System Metrics</h3>
+                <button class="dev-button" id="getMetrics">
+                    <i class="fas fa-chart-line"></i> Get System Metrics
+                </button>
+                <button class="dev-button" id="resetMetrics">
+                    <i class="fas fa-redo"></i> Reset Metrics
+                </button>
+                <div id="metricsOutput" class="dev-output" style="display: none;"></div>
+            </div>
+
+            <!-- API Testing Section -->
+            <div class="dev-section">
+                <h3><i class="fas fa-flask"></i> API Testing</h3>
+                <input type="text" id="testEndpoint" class="dev-input" placeholder="API Endpoint (e.g., /api/health/)">
+                <button class="dev-button" id="testApi">
+                    <i class="fas fa-play"></i> Test API Endpoint
+                </button>
+                <div id="apiTestOutput" class="dev-output" style="display: none;"></div>
+            </div>
+
+            <!-- Debug Info Section -->
+            <div class="dev-section">
+                <h3><i class="fas fa-bug"></i> Debug Info</h3>
+                <div class="dev-status" id="connectionStatus">
+                    <i class="fas fa-circle"></i>
+                    <span>Connection: Checking...</span>
+                </div>
+                <div class="dev-status" id="lastRequest">
+                    <i class="fas fa-clock"></i>
+                    <span>Last Request: None</span>
+                </div>
+                <div class="dev-status" id="errorCount">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Errors: 0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="{% static 'js/app.js' %}"></script>
 </body>

@@ -33,8 +33,35 @@ class RAGAgent {
             sessionCount: document.getElementById('sessionCount'),
             sessionId: document.getElementById('sessionId'),
             responseTime: document.getElementById('responseTime'),
-            recentQueries: document.getElementById('recentQueries')
+            recentQueries: document.getElementById('recentQueries'),
+            // Developer mode elements
+            developerToggle: document.getElementById('developerToggle'),
+            developerMode: document.getElementById('developerMode'),
+            closeDeveloperMode: document.getElementById('closeDeveloperMode'),
+            devSessionId: document.getElementById('devSessionId'),
+            getMemory: document.getElementById('getMemory'),
+            clearMemory: document.getElementById('clearMemory'),
+            listSessions: document.getElementById('listSessions'),
+            memoryOutput: document.getElementById('memoryOutput'),
+            getKbStatus: document.getElementById('getKbStatus'),
+            reloadKb: document.getElementById('reloadKb'),
+            clearVectorStore: document.getElementById('clearVectorStore'),
+            kbOutput: document.getElementById('kbOutput'),
+            getMetrics: document.getElementById('getMetrics'),
+            resetMetrics: document.getElementById('resetMetrics'),
+            metricsOutput: document.getElementById('metricsOutput'),
+            testEndpoint: document.getElementById('testEndpoint'),
+            testApi: document.getElementById('testApi'),
+            apiTestOutput: document.getElementById('apiTestOutput'),
+            connectionStatus: document.getElementById('connectionStatus'),
+            lastRequest: document.getElementById('lastRequest'),
+            errorCount: document.getElementById('errorCount')
         };
+        
+        // Initialize developer mode state
+        this.developerModeActive = false;
+        this.errorCount = 0;
+        this.lastRequestTime = null;
     }
 
     bindEvents() {
@@ -68,6 +95,19 @@ class RAGAgent {
             this.elements.queryInput.style.height = 'auto';
             this.elements.queryInput.style.height = this.elements.queryInput.scrollHeight + 'px';
         });
+
+        // Developer mode events
+        this.elements.developerToggle.addEventListener('click', () => this.toggleDeveloperMode());
+        this.elements.closeDeveloperMode.addEventListener('click', () => this.toggleDeveloperMode());
+        this.elements.getMemory.addEventListener('click', () => this.getMemoryForSession());
+        this.elements.clearMemory.addEventListener('click', () => this.clearSessionMemory());
+        this.elements.listSessions.addEventListener('click', () => this.listAllSessions());
+        this.elements.getKbStatus.addEventListener('click', () => this.getKnowledgeBaseStatus());
+        this.elements.reloadKb.addEventListener('click', () => this.reloadKnowledgeBase());
+        this.elements.clearVectorStore.addEventListener('click', () => this.clearVectorStore());
+        this.elements.getMetrics.addEventListener('click', () => this.getSystemMetrics());
+        this.elements.resetMetrics.addEventListener('click', () => this.resetSystemMetrics());
+        this.elements.testApi.addEventListener('click', () => this.testApiEndpoint());
     }
 
     generateSessionId() {
@@ -134,7 +174,7 @@ class RAGAgent {
 
     addMessage(role, content, sources = [], confidence = null, webSearchUsed = false) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${role} fade-in`;
+        messageDiv.className = `message ${role}`;
 
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
@@ -185,6 +225,12 @@ class RAGAgent {
         }
 
         this.elements.chatMessages.appendChild(messageDiv);
+        
+        // Add animation after a brief delay
+        setTimeout(() => {
+            messageDiv.classList.add('fade-in');
+        }, 50);
+        
         this.scrollToBottom();
     }
 
@@ -409,7 +455,222 @@ class RAGAgent {
             }
         };
 
-        return fetch(url, { ...defaultOptions, ...options });
+        // Update debug info
+        this.lastRequestTime = new Date().toLocaleTimeString();
+        this.updateDebugInfo();
+
+        try {
+            const response = await fetch(url, { ...defaultOptions, ...options });
+            return response;
+        } catch (error) {
+            this.errorCount++;
+            this.updateDebugInfo();
+            throw error;
+        }
+    }
+
+    // Developer Mode Methods
+    toggleDeveloperMode() {
+        this.developerModeActive = !this.developerModeActive;
+        this.elements.developerMode.classList.toggle('active', this.developerModeActive);
+        
+        if (this.developerModeActive) {
+            this.elements.developerToggle.innerHTML = '<i class="fas fa-times"></i>';
+            this.elements.developerToggle.title = 'Close Developer Mode';
+        } else {
+            this.elements.developerToggle.innerHTML = '<i class="fas fa-code"></i>';
+            this.elements.developerToggle.title = 'Developer Mode';
+        }
+    }
+
+    updateDebugInfo() {
+        this.elements.lastRequest.textContent = `Last Request: ${this.lastRequestTime || 'None'}`;
+        this.elements.errorCount.textContent = `Errors: ${this.errorCount}`;
+        
+        // Update connection status
+        this.elements.connectionStatus.innerHTML = `
+            <i class="fas fa-circle ${this.errorCount > 0 ? 'offline' : 'online'}"></i>
+            <span>Connection: ${this.errorCount > 0 ? 'Issues' : 'OK'}</span>
+        `;
+    }
+
+    async getMemoryForSession() {
+        const sessionId = this.elements.devSessionId.value || this.sessionId;
+        try {
+            const response = await this.makeRequest(`/memory/${sessionId}/`);
+            const data = await response.json();
+            
+            this.elements.memoryOutput.style.display = 'block';
+            this.elements.memoryOutput.textContent = JSON.stringify(data, null, 2);
+            this.showNotification('Memory retrieved successfully!', 'success');
+        } catch (error) {
+            this.elements.memoryOutput.style.display = 'block';
+            this.elements.memoryOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to get memory', 'error');
+        }
+    }
+
+    async clearSessionMemory() {
+        const sessionId = this.elements.devSessionId.value || this.sessionId;
+        if (!confirm(`Are you sure you want to clear memory for session: ${sessionId}?`)) {
+            return;
+        }
+        
+        try {
+            const response = await this.makeRequest(`/memory/${sessionId}/`, { method: 'DELETE' });
+            if (response.ok) {
+                this.elements.memoryOutput.style.display = 'block';
+                this.elements.memoryOutput.textContent = 'Memory cleared successfully!';
+                this.showNotification('Memory cleared successfully!', 'success');
+            } else {
+                throw new Error('Failed to clear memory');
+            }
+        } catch (error) {
+            this.elements.memoryOutput.style.display = 'block';
+            this.elements.memoryOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to clear memory', 'error');
+        }
+    }
+
+    async listAllSessions() {
+        try {
+            const response = await this.makeRequest('/sessions/');
+            const data = await response.json();
+            
+            this.elements.memoryOutput.style.display = 'block';
+            this.elements.memoryOutput.textContent = JSON.stringify(data, null, 2);
+            this.showNotification('Sessions retrieved successfully!', 'success');
+        } catch (error) {
+            this.elements.memoryOutput.style.display = 'block';
+            this.elements.memoryOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to get sessions', 'error');
+        }
+    }
+
+    async getKnowledgeBaseStatus() {
+        try {
+            const response = await this.makeRequest('/knowledge-base/status/');
+            const data = await response.json();
+            
+            this.elements.kbOutput.style.display = 'block';
+            this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
+            this.showNotification('Knowledge base status retrieved!', 'success');
+        } catch (error) {
+            this.elements.kbOutput.style.display = 'block';
+            this.elements.kbOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to get KB status', 'error');
+        }
+    }
+
+    async reloadKnowledgeBase() {
+        if (!confirm('Are you sure you want to reload the knowledge base? This may take a while.')) {
+            return;
+        }
+        
+        try {
+            this.elements.reloadKb.classList.add('loading');
+            this.elements.reloadKb.disabled = true;
+            
+            const response = await this.makeRequest('/knowledge-base/reload/', { method: 'POST' });
+            const data = await response.json();
+            
+            this.elements.kbOutput.style.display = 'block';
+            this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
+            this.showNotification('Knowledge base reloaded successfully!', 'success');
+            
+            // Refresh system status
+            this.loadSystemStatus();
+        } catch (error) {
+            this.elements.kbOutput.style.display = 'block';
+            this.elements.kbOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to reload knowledge base', 'error');
+        } finally {
+            this.elements.reloadKb.classList.remove('loading');
+            this.elements.reloadKb.disabled = false;
+        }
+    }
+
+    async clearVectorStore() {
+        if (!confirm('Are you sure you want to clear the vector store? This will delete ALL document data!')) {
+            return;
+        }
+        
+        try {
+            this.elements.clearVectorStore.classList.add('loading');
+            this.elements.clearVectorStore.disabled = true;
+            
+            const response = await this.makeRequest('/vectorstore/clear/', { method: 'DELETE' });
+            const data = await response.json();
+            
+            this.elements.kbOutput.style.display = 'block';
+            this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
+            this.showNotification('Vector store cleared successfully!', 'success');
+            
+            // Refresh system status
+            this.loadSystemStatus();
+        } catch (error) {
+            this.elements.kbOutput.style.display = 'block';
+            this.elements.kbOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to clear vector store', 'error');
+        } finally {
+            this.elements.clearVectorStore.classList.remove('loading');
+            this.elements.clearVectorStore.disabled = false;
+        }
+    }
+
+    async getSystemMetrics() {
+        try {
+            const response = await this.makeRequest('/metrics/');
+            const data = await response.json();
+            
+            this.elements.metricsOutput.style.display = 'block';
+            this.elements.metricsOutput.textContent = JSON.stringify(data, null, 2);
+            this.showNotification('Metrics retrieved successfully!', 'success');
+        } catch (error) {
+            this.elements.metricsOutput.style.display = 'block';
+            this.elements.metricsOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to get metrics', 'error');
+        }
+    }
+
+    async resetSystemMetrics() {
+        if (!confirm('Are you sure you want to reset all system metrics?')) {
+            return;
+        }
+        
+        try {
+            const response = await this.makeRequest('/metrics/', { method: 'POST' });
+            const data = await response.json();
+            
+            this.elements.metricsOutput.style.display = 'block';
+            this.elements.metricsOutput.textContent = JSON.stringify(data, null, 2);
+            this.showNotification('Metrics reset successfully!', 'success');
+        } catch (error) {
+            this.elements.metricsOutput.style.display = 'block';
+            this.elements.metricsOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('Failed to reset metrics', 'error');
+        }
+    }
+
+    async testApiEndpoint() {
+        const endpoint = this.elements.testEndpoint.value.trim();
+        if (!endpoint) {
+            this.showNotification('Please enter an endpoint', 'error');
+            return;
+        }
+        
+        try {
+            const response = await this.makeRequest(endpoint);
+            const data = await response.json();
+            
+            this.elements.apiTestOutput.style.display = 'block';
+            this.elements.apiTestOutput.textContent = `Status: ${response.status}\n\n${JSON.stringify(data, null, 2)}`;
+            this.showNotification('API test completed!', 'success');
+        } catch (error) {
+            this.elements.apiTestOutput.style.display = 'block';
+            this.elements.apiTestOutput.textContent = `Error: ${error.message}`;
+            this.showNotification('API test failed', 'error');
+        }
     }
 }
 
