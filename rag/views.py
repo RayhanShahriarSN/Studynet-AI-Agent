@@ -276,7 +276,7 @@ class ClearChat_admin(View):
 RAG_PDF_DIR = settings.RAG_PDF_DIR
 
 class UploadPDF(View):
-    template_name = "uploadPDF.html"
+    template_name = "uploadPDF2.html"
    
 
     def get(self, request):
@@ -543,16 +543,11 @@ class ClearChatPhi(View):
 
 
 
-SESSION_KEY = "chat_history"
 
-# Azure OpenAI settings
-API_KEY = os.getenv("AZURE_API_KEY")
-ENDPOINT = os.getenv("AZURE_ENDPOINT")
-DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT")
 
 @method_decorator(csrf_protect, name='dispatch')
-class QnAPagePhi(View):
-    template_name = "QnA_user.html"
+class QnAPagePhi_admin(View):
+    template_name = "QnA_admin2.html"
 
     def __init__(self):
         super().__init__()
@@ -672,17 +667,8 @@ class QnAPagePhi(View):
             question = ask_form.cleaned_data["question"]
             chat.append({"who": "user", "text": question})
 
-            if request.user.tokens_used > 1000000:
-                chat.append({"who": "bot", "text": "❌ You have exceeded your token limit and cannot ask further questions."})
-                return render(request, self.template_name, {
-                "ask_form": QuestionForm(),
-                "chat": chat,
-                "status_msg": "Token limit reached"
-            })
             
-            else:
-
-                try:
+            try:
                 
                     relevant_texts = []
                     for pdf in self.pdf_texts:
@@ -699,29 +685,18 @@ class QnAPagePhi(View):
                     print(request.user.tokens_used)
                     request.user.save()
 
-                    if 908000 < request.user.tokens_used <= 1000000:
-                        chat.append({"who": "bot", "text": "Warning! you have used {request.user.tokens_used} tokens. You are close to your token limit"})
+    
+                    answer_clean = self.clean_response_text(answer)
+                    chat.append({"who": "bot", "text": answer_clean})
 
-                    elif request.user.tokens_used > 1000000:
-                        chat.append({"who": "bot", "text": "❌ You have exceeded your token limit and cannot ask further questions."})
-                        return render(request, self.template_name, {
-                        "ask_form": QuestionForm(),
-                        "chat": chat,
-                        "status_msg": "Token limit reached"
-                        })
-                    
-                    else:
-                        answer_clean = self.clean_response_text(answer)
-                        chat.append({"who": "bot", "text": answer_clean})
-
-                except Exception as e:
+            except Exception as e:
                     error_msg = f"Azure OpenAI error: {e}"
                     chat.append({"who": "bot", "text": error_msg})
                     django_messages.error(request, error_msg)
 
                 # Save chat session
-                request.session[SESSION_KEY] = chat
-                request.session.modified = True
+            request.session[SESSION_KEY] = chat
+            request.session.modified = True
 
         return render(request, self.template_name, {
                 "ask_form": QuestionForm(),
@@ -732,3 +707,110 @@ class QnAPagePhi(View):
 
 
     
+class ClearChatPhiAdmin(View):
+    def post(self, request):
+        request.session[SESSION_KEY] = []
+        request.session.modified = True
+        messages.info(request, "Conversation cleared.")
+        return redirect("rag_qna_page_phi_admin")
+    
+
+
+
+
+import uuid
+import time
+import requests
+from django.shortcuts import render, redirect
+from django.views import View
+from django.conf import settings
+from django.contrib import messages
+
+from .forms import  QuestionForm, PDFUploadForm
+
+SESSION_KEY = "chat_history"
+
+class QnAPagePhi(View):
+    template_name = "QnA_user.html"
+    def get(self, request):
+        if "session_id" not in request.session:
+            request.session["session_id"] = str(uuid.uuid4())
+
+        chat = request.session.get(SESSION_KEY, [])
+        recent_queries = [m["text"] for m in chat if m["who"] == "user"][-10:]
+        status_msg = self.get_system_status()
+
+        context = {
+            "chat": chat,
+            "ask_form": QuestionForm(),
+            "llm_form": LLMConfigForm(),
+            "status_msg": status_msg,
+            "session_id": request.session["session_id"],
+            "recent_queries": recent_queries,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        chat = request.session.get(SESSION_KEY, [])
+        ask_form = QuestionForm(request.POST)
+
+        if ask_form.is_valid():
+            question = ask_form.cleaned_data["question"]
+            chat.append({"who": "user", "text": question, "timestamp": time.time()})
+
+            answer, sources, confidence, web_search_used = self.query_rag_backend(
+                question, request.session["session_id"]
+            )
+            chat.append({
+                "who": "bot",
+                "text": answer,
+                "sources": sources,
+                "confidence": confidence,
+                "web_search_used": web_search_used,
+                "timestamp": time.time(),
+            })
+
+            request.session[SESSION_KEY] = chat
+            request.session.modified = True
+            return redirect("rag_qna_page_phi")
+
+        return self.get(request)
+
+    def query_rag_backend(self, question, session_id):
+        """Send question to RAG API"""
+        try:
+            url = f"{settings.RAG_API_BASE_URL}/query/"
+            payload = {
+                "query": question,
+                "session_id": session_id,
+                "use_web_search": True,
+                "enhance_formatting": True
+            }
+            response = requests.post(url, json=payload)
+            if response.ok:
+                data = response.json()
+                return (
+                    data.get("answer", ""),
+                    data.get("sources", []),
+                    data.get("confidence_score", None),
+                    data.get("web_search_used", False),
+                )
+            return f"Error: {response.text}", [], None, False
+        except Exception as e:
+            return f"Error: {str(e)}", [], None, False
+
+    def get_system_status(self):
+        try:
+            api_response = requests.get(f"{settings.RAG_API_BASE_URL}/health/")
+            if api_response.ok:
+                kb_response = requests.get(f"{settings.RAG_API_BASE_URL}/knowledge-base/status/")
+                kb_data = kb_response.json() if kb_response.ok else {}
+                return f"{kb_data.get('total_documents', 'Unknown')} documents"
+            return "Offline"
+        except:
+            return "Offline"
+        
+
+
+
+

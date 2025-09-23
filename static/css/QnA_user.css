@@ -241,7 +241,9 @@ body {
     fill: none;
 }
 
-.sidebar-footer {
+/*Clear Chat */
+
+.clear-chat {
     padding: 5px;
     margin-bottom: 50px;
 }
@@ -251,19 +253,33 @@ body {
 .btn-clear {
     width: 20%;
     padding: 10px 10px;
-    background: white;
+    background: #282F43;
+    color: white;
     border-radius: 30px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    margin-top: 50px;
+    border: 1px solid white;
     
 }
 
 .btn-clear:hover {
-    background: grey;
+    background: white;
+    color: black;
+    border: 1px solid black;
+}
+
+/* Backend status */
+
+.backend-status {
     color: white;
 }
+
+
+
+
 
 /* Chat Interface Styles */
 .chat-interface {
@@ -418,28 +434,7 @@ body {
     color: #0c5460;
 }
 
-/* Animations */
-.celebration-icon,
-.students-icon,
-.success-icon {
-    font-size: 60px;
-    margin: 20px;
-    animation: float 3s ease-in-out infinite;
-    display: block;
-}
 
-.students-icon {
-    animation-delay: 1s;
-}
-
-.success-icon {
-    animation-delay: 2s;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-}
 
 /* Footer */
 .footer {
@@ -517,6 +512,8 @@ body {
 .social-media .social-icon:hover {
     background: #9B2063;
 }
+
+
 
 /* Responsive Design */
 @media (max-width: 1024px) {
@@ -683,14 +680,12 @@ body {
     }
 
 
+    .btn-clear {
+        border-radius: 10px;
+        width: 100px;
+    }
 
-    .status-dot {
-    width: 8px;
-    height: 8px;
-    background: #48bb78;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
+
 
 
 

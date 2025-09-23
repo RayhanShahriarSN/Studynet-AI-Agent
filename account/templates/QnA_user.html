@@ -12,12 +12,11 @@
     <header class="header">
         <div class="nav-container">
             <a href="{% url 'login_page' %}"> 
-                <img src="../../static/images/logo.png" alt="" class="image">
+                <img src="{% static 'images/logo.png' %}" alt="" class="image">
                 <div class="logo-icon"></div>
             </a>
             <div class="auth-buttons">
-                <a href="{% url 'login_page' %}" class="login-btn">LOGIN</a>
-                <a href="{% url 'signup_page' %}" class="signup-btn">SIGN UP</a>
+                <a href="{% url 'logout_page' %}" class="signup-btn">LOGOUT</a>
             </div>
         </div>
     </header>
@@ -28,85 +27,20 @@
             <div class="signup-container">
                 <div class="signup-card">
                     {% if not chat %}
-                    <div class="welcome-screen">
-                        <div class="welcome-content">
-                            <h1 class="welcome-title">What can I help you with today?</h1>
-                            <p class="welcome-subtitle">Ask me anything and I'll provide detailed, helpful responses</p>
+                        <div class="welcome-screen">
+                            <div class="welcome-content">
+                                <h1 class="welcome-title">What can I help you with today?</h1>
+                                <p class="welcome-subtitle">Ask me anything and I'll provide detailed, helpful responses</p>
 
-                            <form action="{% url 'rag_qna_page_phi' %}" method="post" class="welcome-search-form">
-                                {% csrf_token %}
-                                <div class="search-container">
-                                    <!-- Graduation cap icon -->
-                                    <svg class="graduation-icon" viewBox="0 0 24 24">
-                                        <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
-                                    </svg>
-                                    
-                                    {{ ask_form.question }}
-                                    
-                                    <button type="submit" class="search-icon-container">
-                                        <svg class="search-icon" viewBox="0 0 24 24">
-                                            <circle cx="11" cy="11" r="8"></circle>
-                                            <path d="m21 21-4.35-4.35"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </form>
-                            <div class="sidebar-footer">
-                                <form action="{% url 'clear_chatphi' %}" method="post">
-                                {% csrf_token %}
-                                    <button type="submit" class="btn-clear">Clear Conversation</button>
-                                </form>
-                             </div>
-                        </div>
-                    </div>
-
-                    {% endif %}
-
-                    {% if chat %}
-                    <div class="chat-interface">
-                        <div class="chat-messages">
-                            {% for message in chat %}
-                                <div class="message-container {{ message.who }}">
-                                    <div class="message-content">
-                                        <div class="message-header">
-                                            <div class="message-avatar">
-                                                {% if message.who == 'user' %}
-                                                    <span class="avatar-text">You</span>
-                                                {% else %}
-                                                    <span class="avatar-icon">🤖</span>
-                                                {% endif %}
-                                            </div>
-                                            <div class="message-meta">
-                                                <span class="message-sender">{{ message.who|title }}</span>
-                                                {% if message.llm %}
-                                                    <span class="message-model">{{ message.llm }}</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="message-text">
-                                            {% if message.who == 'bot' %}
-                                                {{ message.text|linebreaks|safe }}
-                                            {% else %}
-                                                {{ message.text|linebreaks|safe }}
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="bottom-search-bar">
-                            <div class="bottom-search-container">
-                                <form action="{% url 'rag_qna_page_phi' %}" method="post" class="bottom-search-form">
+                                <form action="{% url 'rag_qna_page_phi' %}" method="post" class="welcome-search-form">
                                     {% csrf_token %}
-                                    <div class="search-container bottom">
-                                        <!-- Graduation cap icon -->
+                                    <div class="search-container">
                                         <svg class="graduation-icon" viewBox="0 0 24 24">
                                             <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
                                         </svg>
-                                        
+
                                         {{ ask_form.question }}
-                                        
+
                                         <button type="submit" class="search-icon-container">
                                             <svg class="search-icon" viewBox="0 0 24 24">
                                                 <circle cx="11" cy="11" r="8"></circle>
@@ -115,17 +49,88 @@
                                         </button>
                                     </div>
                                 </form>
+
+                                <div class="clear-chat">
+                                    <form action="{% url 'clear_chatphi' %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-clear">CLEAR CHAT</button>
+                                    </form>
+                                    <div class="backend-status">
+                                        <span>{{ status_msg }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    {% endif %}
 
-                        <div class="status-dot"></div>
-                            <span>{{ status_msg }}</span>
+                    {% if chat %}
+                        <div class="chat-interface">
+                            <div class="chat-messages">
+                                {% for message in chat %}
+                                    <div class="message-container {{ message.who }}">
+                                        <div class="message-content">
+                                            <div class="message-header">
+                                                <div class="message-avatar">
+                                                    {% if message.who == 'user' %}
+                                                        <span class="avatar-text">You</span>
+                                                    {% else %}
+                                                        <span class="avatar-icon">🤖</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="message-meta">
+                                                    <span class="message-sender">{{ message.who|title }}</span>
+                                                    {% if message.llm %}
+                                                        <span class="message-model">{{ message.llm }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="message-text">
+                                                {{ message.text|linebreaks|safe }}
+                                            </div>
+                                            {% if message.sources %}
+                                                <div class="message-sources">
+                                                    <h4>Sources:</h4>
+                                                    {% for src in message.sources %}
+                                                        <div class="source-item">
+                                                            <strong>{{ src.type }}:</strong> {{ src.content }}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="bottom-search-bar">
+                                <div class="bottom-search-container">
+                                    <form action="{% url 'rag_qna_page_phi' %}" method="post" class="bottom-search-form">
+                                        {% csrf_token %}
+                                        <div class="search-container bottom">
+                                            <svg class="graduation-icon" viewBox="0 0 24 24">
+                                                <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
+                                            </svg>
+
+                                            {{ ask_form.question }}
+
+                                            <button type="submit" class="search-icon-container">
+                                                <svg class="search-icon" viewBox="0 0 24 24">
+                                                    <circle cx="11" cy="11" r="8"></circle>
+                                                    <path d="m21 21-4.35-4.35"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="sidebar-footer">
+                                <form action="{% url 'clear_chatphi' %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-clear">CLEAR CHAT</button>
+                                </form>
+                            </div>
                         </div>
-
-                       
-
-
-                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -147,7 +152,7 @@
                     <a href="#">Agencies</a>
                     <a href="#">Providers</a>
                 </div>
-                
+
                 <div class="footer-column">
                     <h4>About us</h4>
                     <a href="#">About Us</a>
@@ -156,7 +161,7 @@
                     <a href="#">Studyto for Agent</a>
                     <a href="#">Visa Services</a>
                 </div>
-                
+
                 <div class="footer-column">
                     <h4>Quick Links</h4>
                     <a href="#">Events</a>
