@@ -17,7 +17,7 @@ urlpatterns = [
     path("api/rag/", include("rag.api_urls")),
     path("rag/", include("rag.urls")),
     path("logout/", logout_page, name="logout_page"),
-    path('api/', include('api.urls')),
+  
 ]
 
 if settings.DEBUG:

@@ -64,7 +64,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "account",
     "rag",
-    "api",
+
 ]
 
 # -------------------
@@ -89,7 +89,7 @@ ROOT_URLCONF = "authapi.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "TEMPLATES", BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
