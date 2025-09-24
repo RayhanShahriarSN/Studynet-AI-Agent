@@ -83,16 +83,19 @@ class DocumentProcessor:
     
     @staticmethod
     def load_knowledge_base(knowledge_base_path: str) -> List[Document]:
-        """Load all documents from the knowledge base PDFs folder"""
+        """Load all documents from the knowledge base folder"""
         documents = []
         
         if not os.path.exists(knowledge_base_path):
             logger.warning(f"Knowledge base path does not exist: {knowledge_base_path}")
             return documents
         
-        # Get all PDF files from the knowledge base folder
+        # Supported file types
+        supported_extensions = ['.pdf', '.txt', '.csv', '.json', '.doc', '.docx']
+        
         for filename in os.listdir(knowledge_base_path):
-            if filename.lower().endswith('.pdf'):
+            file_ext = os.path.splitext(filename)[1].lower()
+            if file_ext in supported_extensions:
                 file_path = os.path.join(knowledge_base_path, filename)
                 try:
                     logger.info(f"Loading document: {filename}")
@@ -103,7 +106,7 @@ class DocumentProcessor:
                     logger.error(f"Error loading {filename}: {e}")
                     continue
         
-        logger.info(f"Total documents loaded from PDFs folder: {len(documents)}")
+        logger.info(f"Total documents loaded from knowledge base: {len(documents)}")
         return documents
 
 class QueryOptimizer:
