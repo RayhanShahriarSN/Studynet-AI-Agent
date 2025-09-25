@@ -77,10 +77,10 @@ class UserProfileView(APIView):
 #Frontend
 
 def login_page(request):
-    return render(request, "login2.html")
+    return render(request, "login.html")
 
 def signup_page(request):
-    return render(request, "signup2.html")
+    return render(request, "signup.html")
 
 
 
@@ -100,15 +100,15 @@ def login_page(request):
 
                 # Redirect based on role
                 if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
-                    return redirect("rag_qna_page_phi_admin")
+                    return redirect("rag_admin")
                 else:
-                    return redirect("rag_qna_page_phi")
+                    return redirect("rag_user")
             else:
                 messages.error(request, "❌ Invalid username or password")
     else:
         form = LoginForm()
 
-    return render(request, "login2.html", {"form": form})
+    return render(request, "login.html", {"form": form})
 
 
 
@@ -129,16 +129,16 @@ def signup_page(request):
 
             if password != password2:
                 messages.error(request, "Passwords do not match ❌")
-                return render(request, "signup2.html", {"form": form})
+                return render(request, "signup.html", {"form": form})
 
             # Check if username or email already exists
             if User.objects.filter(username=username).exists():
                 messages.error(request, "Username already exists ❌")
-                return render(request, "signup2.html", {"form": form})
+                return render(request, "signup.html", {"form": form})
             
             if User.objects.filter(email=email).exists():
                 messages.error(request, "Email already exists ❌")
-                return render(request, "signup2.html", {"form": form})
+                return render(request, "signup.html", {"form": form})
 
             # Create Django user using custom model
             User.objects.create_user(username=username, email=email, password=password)
@@ -147,26 +147,11 @@ def signup_page(request):
     else:
         form = SignUpForm()
 
-    return render(request, "signup2.html", {"form": form})
+    return render(request, "signup.html", {"form": form})
 
 
 
-@login_required
-def qna_page(request):
-    if request.method == "POST":
-        question = request.POST.get("question")
-        if question:
-            # You can save this question to your database
-            messages.success(request, f"✅ Question submitted: {question}")
-        else:
-            messages.error(request, "❌ Please enter a question")
-    return render(request, "QnA.html")
 
-
-
-@login_required
-def admin_page(request):
-    return render(request, "admin_dashboard.html")
 
 
 

@@ -10,9 +10,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'authapi.settings')
 django.setup()
 
-from api.utils import document_processor
-from api.config import config
-from api.agent import rag_agent
+from rag.utils import document_processor
+from rag.config import config
+from rag.agent import rag_agent
 
 def load_knowledge_base():
     print("Loading knowledge base...")

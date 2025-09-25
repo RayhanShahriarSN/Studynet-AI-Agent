@@ -13,6 +13,7 @@ from langchain_community.document_loaders import (
 )
 import hashlib
 import json
+from django.conf import settings
 
 # Configure logging
 logging.basicConfig(
@@ -26,45 +27,37 @@ class DocumentProcessor:
     """Utility class for processing various document types"""
     
     @staticmethod
-    def load_document(file_path: str, file_type: Optional[str] = None) -> List[Document]:
-        """Load document based on file type"""
+    def load_knowledge_base(knowledge_base_path: Optional[str] = None) -> List[Document]:
+        """Load all supported documents from the knowledge base folder"""
+        documents = []
         
-        if not file_type:
-            # Detect file type from extension
-            _, ext = os.path.splitext(file_path)
-            file_type = ext.lower().lstrip('.')
+        # Default to media/pdfs if no path provided
+        if not knowledge_base_path:
+            knowledge_base_path = os.path.join(settings.BASE_DIR, "media", "pdfs")
         
-        try:
-            if file_type in ['txt', 'text']:
-                loader = TextLoader(file_path)
-            elif file_type == 'pdf':
-                loader = PyPDFLoader(file_path)
-            elif file_type in ['doc', 'docx']:
-                loader = UnstructuredWordDocumentLoader(file_path)
-            elif file_type == 'csv':
-                loader = CSVLoader(file_path)
-            elif file_type == 'json':
-                loader = JSONLoader(
-                    file_path,
-                    jq_schema='.[]',
-                    text_content=False
-                )
-            else:
-                raise ValueError(f"Unsupported file type: {file_type}")
-            
-            documents = loader.load()
-            
-            # Add metadata
-            for doc in documents:
-                doc.metadata['source_file'] = os.path.basename(file_path)
-                doc.metadata['file_type'] = file_type
-                doc.metadata['doc_id'] = DocumentProcessor.generate_doc_id(doc.page_content)
-            
+        if not os.path.exists(knowledge_base_path):
+            logger.warning(f"Knowledge base path does not exist: {knowledge_base_path}")
             return documents
-            
-        except Exception as e:
-            logger.error(f"Error loading document {file_path}: {e}")
-            raise
+        
+        # Supported file types
+        supported_extensions = ['.pdf', '.txt', '.csv', '.json', '.doc', '.docx']
+        
+        for filename in os.listdir(knowledge_base_path):
+            file_ext = os.path.splitext(filename)[1].lower()
+            if file_ext in supported_extensions:
+                file_path = os.path.join(knowledge_base_path, filename)
+                try:
+                    logger.info(f"Loading document: {filename}")
+                    docs = DocumentProcessor.load_document(file_path)
+                    documents.extend(docs)
+                    logger.info(f"Successfully loaded {len(docs)} chunks from {filename}")
+                except Exception as e:
+                    logger.error(f"Error loading {filename}: {e}")
+                    continue
+        
+        logger.info(f"Total documents loaded from knowledge base: {len(documents)}")
+        return documents
+    
     
     @staticmethod
     def generate_doc_id(content: str) -> str:

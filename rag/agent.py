@@ -17,13 +17,15 @@ class RAGAgent:
     """Main RAG agent with knowledge base and web search fallback"""
     
     def __init__(self):
+        # ✅ Add model_kwargs to capture token usage
         self.llm = AzureChatOpenAI(
             azure_deployment=config.CHAT_MODEL_DEPLOYMENT,
             openai_api_version=config.AZURE_OPENAI_API_VERSION,
             azure_endpoint=config.AZURE_OPENAI_ENDPOINT,
             api_key=config.AZURE_OPENAI_API_KEY,
             temperature=0.7,
-            max_tokens=2000
+            max_tokens=2000,
+            model_kwargs={"stream_usage": True}  # Enable token usage tracking
         )
         
         self.retriever = retriever
@@ -41,6 +43,34 @@ class RAGAgent:
         
         # Create agent
         self.agent_executor = self._create_agent()
+    
+    def _extract_token_usage(self, response) -> int:
+        """Extract token usage from LangChain response"""
+        tokens = 0
+        try:
+            # Method 1: Check response_metadata
+            if hasattr(response, 'response_metadata'):
+                usage = response.response_metadata.get('token_usage', {})
+                tokens = usage.get('total_tokens', 0)
+                print(f"DEBUG - Tokens from response_metadata: {tokens}")
+            
+            # Method 2: Check usage_metadata (newer LangChain versions)
+            if tokens == 0 and hasattr(response, 'usage_metadata'):
+                tokens = response.usage_metadata.get('total_tokens', 0)
+                print(f"DEBUG - Tokens from usage_metadata: {tokens}")
+            
+            # Method 3: Check additional_kwargs
+            if tokens == 0 and hasattr(response, 'additional_kwargs'):
+                usage = response.additional_kwargs.get('usage', {})
+                tokens = usage.get('total_tokens', 0)
+                print(f"DEBUG - Tokens from additional_kwargs: {tokens}")
+            
+            print(f"DEBUG - Final extracted tokens: {tokens}")
+            return tokens
+            
+        except Exception as e:
+            print(f"DEBUG - Error extracting tokens: {e}")
+            return 0
     
     def _create_tools(self) -> List[Tool]:
         """Create tools for the agent"""
@@ -176,6 +206,9 @@ Remember:
         # Add query to memory
         self.memory_manager.add_message(session_id, "user", query)
         
+        # ✅ Initialize token tracking
+        total_tokens_used = 0
+        
         try:
             # First, try to retrieve from knowledge base
             kb_docs = self.retriever.retrieve(
@@ -205,14 +238,21 @@ Remember:
                 
                 prompt = f"""Answer the question using the following information.
                  
- Information:
- {context_docs}
- 
- Question: {enhanced_query}
- 
- Provide a direct, comprehensive answer. If the information doesn't fully answer the question, acknowledge what's missing."""
+Information:
+{context_docs}
+
+Question: {enhanced_query}
+
+Provide a direct, comprehensive answer. If the information doesn't fully answer the question, acknowledge what's missing."""
                 
+                print(f"DEBUG - Calling LLM directly")
                 response = self.llm.invoke(prompt)
+                
+                # ✅ Extract token usage from direct LLM call
+                tokens_this_call = self._extract_token_usage(response)
+                total_tokens_used += tokens_this_call
+                print(f"DEBUG - Direct LLM call used {tokens_this_call} tokens")
+                
                 answer = response.content
                 sources = [{"type": "knowledge_base", "content": doc.page_content[:200]} 
                           for doc in kb_docs[:3]]
@@ -221,6 +261,7 @@ Remember:
             else:
                 # Use agent with tools
                 try:
+                    print(f"DEBUG - Using agent executor")
                     result = self.agent_executor.invoke({
                         "input": enhanced_query,
                         "chat_history": context,
@@ -229,6 +270,15 @@ Remember:
                     })
                     
                     answer = result.get("output", "I couldn't process your query properly.")
+                    
+                    # ✅ Try to extract tokens from agent execution
+                    # This is tricky with agents, but we can estimate or try to capture from callbacks
+                    # For now, estimate based on input/output length
+                    input_tokens = len(enhanced_query.split()) * 1.3  # Rough estimate
+                    output_tokens = len(answer.split()) * 1.3
+                    estimated_tokens = int(input_tokens + output_tokens)
+                    total_tokens_used += estimated_tokens
+                    print(f"DEBUG - Agent execution estimated {estimated_tokens} tokens")
                     
                     # Extract sources from intermediate steps
                     sources = []
@@ -261,7 +311,14 @@ Question: {enhanced_query}
 
 Provide a direct, comprehensive answer. If the information doesn't fully answer the question, acknowledge what's missing."""
                         
+                        print(f"DEBUG - Using fallback LLM call")
                         response = self.llm.invoke(fallback_prompt)
+                        
+                        # ✅ Extract token usage from fallback call
+                        tokens_this_call = self._extract_token_usage(response)
+                        total_tokens_used += tokens_this_call
+                        print(f"DEBUG - Fallback LLM call used {tokens_this_call} tokens")
+                        
                         answer = response.content
                         sources = [{"type": "knowledge_base", "content": doc.page_content[:200]} 
                                   for doc in kb_docs[:3]]
@@ -283,13 +340,16 @@ Provide a direct, comprehensive answer. If the information doesn't fully answer 
             # Summarize if needed
             self.memory_manager.summarize_if_needed(session_id)
             
+            print(f"DEBUG - Total tokens used in this request: {total_tokens_used}")
+            
             return {
                 "answer": answer,
                 "sources": sources,
                 "session_id": session_id,
                 "web_search_used": web_search_used,
                 "confidence_score": min(max([doc.metadata.get('retrieval_score', 0.5) 
-                                           for doc in kb_docs]) if kb_docs else 0.5, 1.0)
+                                           for doc in kb_docs]) if kb_docs else 0.5, 1.0),
+                "tokens_used": total_tokens_used  # ✅ Return actual token usage
             }
             
         except Exception as e:
@@ -299,7 +359,8 @@ Provide a direct, comprehensive answer. If the information doesn't fully answer 
                 "sources": [],
                 "session_id": session_id,
                 "web_search_used": False,
-                "confidence_score": 0.0
+                "confidence_score": 0.0,
+                "tokens_used": 0  # No tokens used if error
             }
     
     def add_documents(self, documents: List[Document]) -> bool:

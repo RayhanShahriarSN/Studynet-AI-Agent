@@ -15,98 +15,59 @@
                 <img src="{% static 'images/logo.png' %}" alt="" class="image">
                 <div class="logo-icon"></div>
             </a>
+            <div class="auth-info">
+                {% if user.is_authenticated %}
+                    <span class="logged-in-user">Logged in as: {{ user.username }}</span>
+                    <span class="token-info">
+                        Tokens: {{ user.tokens_used|default:0 }}/{{ max_tokens|default:1000 }}
+                        {% if tokens_remaining <= 100 %}
+                            <span class="token-warning">⚠ Low tokens!</span>
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
             <div class="auth-buttons">
                 <a href="{% url 'logout_page' %}" class="signup-btn">LOGOUT</a>
             </div>
         </div>
     </header>
 
+    <!-- Messages Display -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                    <button class="alert-close" onclick="this.parentElement.style.display='none'">×</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <!-- Main Content -->
     <main class="main-content">
         <div class="content-wrapper">
             <div class="signup-container">
                 <div class="signup-card">
+
                     {% if not chat %}
+                        <!-- Welcome Screen -->
                         <div class="welcome-screen">
                             <div class="welcome-content">
                                 <h1 class="welcome-title">What can I help you with today?</h1>
                                 <p class="welcome-subtitle">Ask me anything and I'll provide detailed, helpful responses</p>
 
-                                <form action="{% url 'rag_qna_page_phi' %}" method="post" class="welcome-search-form">
-                                    {% csrf_token %}
-                                    <div class="search-container">
-                                        <svg class="graduation-icon" viewBox="0 0 24 24">
-                                            <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
-                                        </svg>
-
-                                        {{ ask_form.question }}
-
-                                        <button type="submit" class="search-icon-container">
-                                            <svg class="search-icon" viewBox="0 0 24 24">
-                                                <circle cx="11" cy="11" r="8"></circle>
-                                                <path d="m21 21-4.35-4.35"></path>
-                                            </svg>
-                                        </button>
+                                <!-- Token Warning -->
+                                {% if user.is_authenticated and tokens_remaining <= 0 %}
+                                    <div class="token-limit-reached">
+                                        <p class="error-message">Maximum tokens reached!</p>
+                                        <p>You have used all {{ max_tokens }} tokens. Please contact support.</p>
                                     </div>
-                                </form>
-
-                                <div class="clear-chat">
-                                    <form action="{% url 'clear_chat_api' %}" method="post">
+                                {% else %}
+                                    <!-- Search Form -->
+                                    <form action="{% url 'rag_user' %}" method="post" class="welcome-search-form">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn-clear">CLEAR CHAT</button>
-                                    </form>
-                                    <div class="backend-status">
-                                        <span>{{ status_msg }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-
-                    {% if chat %}
-                        <div class="chat-interface">
-                            <div class="chat-messages">
-                                {% for message in chat %}
-                                    <div class="message-container {{ message.who }}">
-                                        <div class="message-content">
-                                            <div class="message-header">
-                                                <div class="message-avatar">
-                                                    {% if message.who == 'user' %}
-                                                        <span class="avatar-text">You</span>
-                                                    {% else %}
-                                                        <span class="avatar-icon">🤖</span>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="message-meta">
-                                                    <span class="message-sender">{{ message.who|title }}</span>
-                                                    {% if message.llm %}
-                                                        <span class="message-model">{{ message.llm }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            <div class="message-text">
-                                                {{ message.text|safe }}
-                                            </div>
-                                            {% if message.sources %}
-                                                <div class="message-sources">
-                                                    <h4>Sources:</h4>
-                                                    {% for src in message.sources %}
-                                                        <div class="source-item">
-                                                            <strong>{{ src.type }}:</strong> {{ src.content }}
-                                                        </div>
-                                                    {% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-
-                            <div class="bottom-search-bar">
-                                <div class="bottom-search-container">
-                                    <form action="{% url 'rag_qna_page_phi' %}" method="post" class="bottom-search-form">
-                                        {% csrf_token %}
-                                        <div class="search-container bottom">
+                                        <div class="search-container">
                                             <svg class="graduation-icon" viewBox="0 0 24 24">
                                                 <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
                                             </svg>
@@ -121,17 +82,183 @@
                                             </button>
                                         </div>
                                     </form>
+                                {% endif %}
+
+                                <!-- Recent Queries -->
+                                {% if recent_queries %}
+                                    <div class="recent-queries-section">
+                                        <h4>Recent Queries</h4>
+                                        <div class="recent-queries-list">
+                                            {% for query in recent_queries %}
+                                                <form action="{% url 'rag_user' %}" method="post" class="recent-query-form">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="question" value="{{ query }}">
+                                                    <button type="submit" class="recent-query-btn">{{ query|truncatechars:50 }}</button>
+                                                </form>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                
+
+                                <!-- Clear Chat and System Status -->
+                                <div class="clear-chat">
+                                    <form action="{% url 'clear_chat_user' %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-clear">CLEAR CHAT</button>
+                                    </form>
+                                    
+                                    <div class="backend-status">
+                                        <div class="status-grid">
+                                            <div class="status-item">
+                                                <span class="status-label">API Status</span>
+                                                <span class="status-value {{ api_status_class }}">{{ api_status }}</span>
+                                            </div>
+                                            <div class="status-item">
+                                                <span class="status-label">Knowledge Base</span>
+                                                <span class="status-value">{{ kb_documents }} docs</span>
+                                            </div>
+                                            <div class="status-item">
+                                                <span class="status-label">Session</span>
+                                                <span class="status-value">{{ session_id|truncatechars:8 }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
+                    {% elif chat %}
+                        <!-- Chat Interface -->
+                        <div class="chat-interface">
+                            
+                            <!-- Chat Header with Token Info -->
+                            {% if user.is_authenticated %}
+                            <div class="chat-header">
+                                <div class="chat-token-info">
+                                    <span class="token-display">
+                                        Tokens: {{ user.tokens_used|default:0 }}/{{ max_tokens|default:1000 }}
+                                        {% if tokens_remaining <= 100 %}
+                                            <span class="token-warning">⚠ Low tokens!</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Chat Messages -->
+                            <div class="chat-messages">
+                                {% for message in chat %}
+                                    <div class="message-container {{ message.who }}">
+                                        <div class="message-content">
+                                            <div class="message-header">
+                                                <div class="message-avatar">
+                                                    {% if message.who == 'user' %}
+                                                        <span class="avatar-text">{{ user.username }}</span>
+                                                    {% else %}
+                                                        <span class="avatar-icon">🤖</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="message-meta">
+                                                    <span class="message-sender">
+                                                        {% if message.who == 'user' %}
+                                                            {{ user.username }}
+                                                        {% else %}
+                                                            StudyNet AI
+                                                        {% endif %}
+                                                    </span>
+                                                    {% if message.llm %}
+                                                        <span class="message-model">{{ message.llm }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="message-text">
+                                                {{ message.text| safe }}
+                                                {% if message.confidence or message.web_search %}
+                                                    <div class="message-metadata">
+                                                        {% if message.confidence %}
+                                                            <span class="confidence-score">Confidence: {{ message.confidence|floatformat:1 }}%</span>
+                                                        {% endif %}
+                                                        {% if message.web_search %}
+                                                            <span class="web-search-indicator">🌐 Web Search Used</span>
+                                                        {% endif %}
+                                                        <span class="timestamp">{{ message.timestamp|default:"now"|date:"H:i" }}</span>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            {% if message.sources %}
+                                                <div class="message-sources">
+                                                    <h4>Sources:</h4>
+                                                    {% for src in message.sources %}
+                                                        <div class="source-item">
+                                                            <strong>{{ src.type|title }}:</strong> {{ src.content|truncatechars:150 }}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Bottom Search Bar -->
+                            {% if not user.is_authenticated or tokens_remaining > 0 %}
+                                <div class="bottom-search-bar">
+                                    <div class="bottom-search-container">
+                                        <form action="{% url 'rag_user' %}" method="post" class="bottom-search-form">
+                                            {% csrf_token %}
+                                            <div class="search-container bottom">
+                                                <svg class="graduation-icon" viewBox="0 0 24 24">
+                                                    <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
+                                                </svg>
+
+                                                <input type="text" name="question" placeholder="Ask a question..." class="question-input" required>
+
+                                                <button type="submit" class="search-icon-container">
+                                                    <svg class="search-icon" viewBox="0 0 24 24">
+                                                        <circle cx="11" cy="11" r="8"></circle>
+                                                        <path d="m21 21-4.35-4.35"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="bottom-search-bar disabled">
+                                    <div class="token-limit-message">
+                                        <p>Token limit reached. Cannot send more messages.</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Sidebar Footer with Controls -->
                             <div class="sidebar-footer">
-                                <form action="{% url 'clear_chat_api' %}" method="post">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn-clear">CLEAR CHAT</button>
-                                </form>
+                                <div class="chat-controls">
+                                    <form action="{% url 'clear_chat_user' %}" method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-clear">CLEAR CHAT</button>
+                                    </form>
+                                    
+                                    <form action="{% url 'upload_pdf' %}" method="post" enctype="multipart/form-data" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="file" name="document" id="chatUpload" accept=".pdf,.docx,.txt" style="display: none;" onchange="this.form.submit()">
+                                        <label for="chatUpload" class="btn-upload">UPLOAD DOC</label>
+                                    </form>
+                                </div>
+                                
+                                <!-- System Status in Chat -->
+                                <div class="chat-status">
+                                    <div class="status-mini">
+                                        <span class="status-dot {{ api_status_class }}"></span>
+                                        <span class="status-text">{{ api_status }} | {{ kb_documents }} docs</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     {% endif %}
+
                 </div>
             </div>
         </div>
@@ -175,4 +302,4 @@
         </div>
     </footer>
 </body>
-</html>
+</html
