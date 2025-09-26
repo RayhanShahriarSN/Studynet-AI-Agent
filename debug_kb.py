@@ -10,10 +10,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rag_backend.settings')
 django.setup()
 
-from api.utils import document_processor
-from api.config import config
-from api.vectorstore import vector_store
-from api.agent import rag_agent
+from rag.utils import document_processor
+from rag.config import config
+from rag.vectorstore import vector_store
+from rag.agent import rag_agent
 
 def test_knowledge_base_loading():
     print("Testing knowledge base loading...")

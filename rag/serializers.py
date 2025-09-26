@@ -1,10 +1,10 @@
-from rest_framework import serializers
 # DRF serializers for RAG backend
 from rest_framework import serializers
 from .models import (
     ChatMessage, ConversationSession, QueryRequest, QueryResponse,
     DocumentUpload, SystemMetrics, KnowledgeBaseStatus
 )
+
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     """Serializer for chat messages"""

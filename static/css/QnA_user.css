@@ -630,7 +630,7 @@ body {
 }
 
 .message-model {
-    color: rgba(255, 255, 255, 0.7);
+    color: white;
     font-size: 12px;
     padding: 2px 8px;
     background: rgba(255, 255, 255, 0.1);
@@ -893,6 +893,12 @@ body {
 .footer-column a:hover {
     color: white;
 }
+
+
+
+
+
+
 
 
 

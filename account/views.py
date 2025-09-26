@@ -100,9 +100,9 @@ def login_page(request):
 
                 # Redirect based on role
                 if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
-                    return redirect("rag_admin")
+                    return redirect("index")
                 else:
-                    return redirect("rag_user")
+                    return redirect("index")
             else:
                 messages.error(request, "❌ Invalid username or password")
     else:

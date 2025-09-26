@@ -11,8 +11,6 @@ logger = logging.getLogger(__name__)
 class IntelligentRetriever:
     """Advanced retriever with query reformulation and reranking"""
     
-
-
     def __init__(self):
         self.llm = AzureChatOpenAI(
             azure_deployment=config.CHAT_MODEL_DEPLOYMENT,

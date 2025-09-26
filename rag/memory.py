@@ -85,12 +85,8 @@ class ConversationMemoryManager:
             session = ConversationSession.objects.get(session_id=session_id)
             messages = session.messages.all()
             
-            if max_messages and messages.exists():
-                messages_list = list(messages)
-                start_index = max(0, len(messages_list) - max_messages)
-                messages = messages_list[start_index:]
-            else:
-                messages = list(messages)
+            if max_messages and len(messages) > max_messages:
+                messages = messages[-max_messages:]
             
             # Format messages for context
             context_parts = []
