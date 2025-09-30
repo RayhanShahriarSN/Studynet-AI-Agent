@@ -114,48 +114,49 @@ class DocumentUploadView(APIView):
     """Upload and process a document"""
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
-    
+
     def post(self, request):
         if 'file' not in request.FILES:
             return Response(
-                {"error": "No file provided"}, 
+                {"error": "No file provided"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             uploaded_file = request.FILES['file']
-            
-            # Save uploaded file temporarily
-            with tempfile.NamedTemporaryFile(delete=False, suffix=uploaded_file.name) as tmp_file:
+
+            # Ensure pdfs directory exists
+            os.makedirs(config.KNOWLEDGE_BASE_PATH, exist_ok=True)
+
+            # Save file to pdfs folder
+            file_path = os.path.join(config.KNOWLEDGE_BASE_PATH, uploaded_file.name)
+            with open(file_path, 'wb+') as destination:
                 for chunk in uploaded_file.chunks():
-                    tmp_file.write(chunk)
-                tmp_file_path = tmp_file.name
-            
+                    destination.write(chunk)
+
             # Process document
-            documents = document_processor.load_document(tmp_file_path)
-            
+            documents = document_processor.load_document(file_path)
+
             # Add to vector store
             success = rag_agent.add_documents(documents)
-            
-            # Clean up temp file
-            os.unlink(tmp_file_path)
-            
+
             if success:
                 return Response({
                     "status": "success",
-                    "message": f"Document {uploaded_file.name} processed successfully",
-                    "chunks_created": len(documents)
+                    "message": f"Document {uploaded_file.name} saved to pdfs/ and embedded successfully",
+                    "chunks_created": len(documents),
+                    "file_path": file_path
                 })
             else:
                 return Response(
                     {"error": "Failed to add documents to vector store"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-                
+
         except Exception as e:
             logger.error(f"Error uploading document: {e}")
             return Response(
-                {"error": str(e)}, 
+                {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

@@ -2,3 +2,5 @@
 vector_store/
 
 staticfiles/
+
+db.sqlite3
