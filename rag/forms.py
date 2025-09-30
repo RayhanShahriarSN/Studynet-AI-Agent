@@ -19,8 +19,8 @@ class QuestionForm(forms.Form):
             "class": "question-input"
         })
     )
-    use_web_search = forms.BooleanField(required=False, label="Use Web Search")
-    enhance_formatting = forms.BooleanField(required=False, label="Enhance Formatting")
+    use_web_search = forms.BooleanField(required=False, label="Use Web Search", initial=False)
+    enhance_formatting = forms.BooleanField(required=False, label="Enhance Formatting", initial=False)
 
 class PDFUploadForm(forms.Form):
     pdf_file = forms.FileField(label="Upload PDF or CSV file")

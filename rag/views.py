@@ -6,37 +6,38 @@ import uuid
 import logging
 import tempfile
 import hashlib
-from pathlib import Path
-from datetime import datetime
+# from pathlib import Path
+# from datetime import datetime
 
 import requests
 import numpy as np
-import PyPDF2
-import markdown
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+# import PyPDF2
+# import markdown
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity
 
 from django.shortcuts import render, redirect
 from django.views import View
-from django.http import JsonResponse
+# from django.http import JsonResponse
 from django.conf import settings
-from django.core.files.storage import default_storage
+# from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.utils.text import get_valid_filename
 from django.views.decorators.csrf import csrf_protect
 from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import  user_passes_test
 from django.contrib import messages
 
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rag.utils import ResponseEnhancer
- 
-from openai import AzureOpenAI, OpenAI
+
+# from openai import AzureOpenAI, OpenAI
+
+# from rag.utils import ResponseEnhancer
 from .utils import (
     document_processor,
     query_optimizer,
@@ -47,13 +48,9 @@ from .utils import (
 from .forms import QuestionForm, LLMConfigForm, PDFUploadForm
 from .agent import rag_agent
 from .memory import memory_manager
-from .utils import document_processor, metrics_collector, response_formatter
 from .vectorstore import vector_store
 from .config import config
-from .models import (
-    QueryRequest, QueryResponse, DocumentUpload, SystemMetrics,
-    KnowledgeBaseStatus, ConversationSession, ChatMessage
-)
+
 from .serializers import (
     QueryRequestInputSerializer, QueryResponseOutputSerializer,
     DocumentUploadInputSerializer, DocumentUploadResponseSerializer,
@@ -61,6 +58,9 @@ from .serializers import (
     KnowledgeBaseReloadSerializer, VectorStoreClearSerializer,
     SystemMetricsSerializer, KnowledgeBaseStatusSerializer
 )
+
+logger = logging.getLogger(__name__)
+
 
 
 SESSION_KEY = "rag_chat_history"
@@ -170,94 +170,18 @@ class UploadPDF(View):
 # -------------------------
 # Admin QnA View
 # -------------------------
-@method_decorator(user_passes_test(lambda u: u.is_admin, login_url='forbidden'), name='dispatch')
-class QnAAdmin(View):
-    template_name = "QnA_admin.html"
 
-    def get(self, request):
-        # Ensure admin session
-        if "session_id" not in request.session:
-            request.session["session_id"] = str(uuid.uuid4())
-        session_id = request.session["session_id"]
 
-        memory_vars = memory_manager.get_memory_variables(session_id)
-        chat_history = memory_vars.get("chat_history", [])
+def user_view(request):
+    """Serve the admin QnA frontend page"""
+    return render(request, 'QnA_user.html')
 
-        chat = []
-        for msg in chat_history:
-            if msg is None or not hasattr(msg, "content"):
-                continue
-            if msg.__class__.__name__ == "HumanMessage":
-                chat.append({"who": "user", "text": msg.content})
-            elif msg.__class__.__name__ == "AIMessage":
-                chat.append({"who": "bot", "text": clean_response_text(msg.content)})
+def index_view(request):
+    """Serve the main frontend page"""
+    return render(request, 'index.html')
 
-        user_messages = [m["text"] for m in chat if m["who"] == "user"]
-        recent_queries = user_messages[-10:] if len(user_messages) > 10 else user_messages
 
-        context = {
-            "chat": chat,
-            "ask_form": QuestionForm(),
-            "llm_form": LLMConfigForm(),
-            "session_id": session_id,
-            "recent_queries": recent_queries,
-        }
-        return render(request, self.template_name, context)
-
-    def post(self, request):
-        if not request.user.is_authenticated:
-            messages.error(request, "Please log in to use the chat service.")
-            return redirect("login_page")
-
-        ask_form = QuestionForm(request.POST)
-        if ask_form.is_valid():
-            question = ask_form.cleaned_data["question"]
-            last_processed_question = request.session.get("last_processed_question")
-            if last_processed_question == question:
-                return redirect("rag_admin")
-            request.session["last_processed_question"] = question
-
-            session_id = request.session.get("session_id", str(uuid.uuid4()))
-            request.session["session_id"] = session_id
-
-            answer, sources, confidence, web_search_used, tokens_used = self.query_rag_backend(
-                question, session_id
-            )
-
-            if tokens_used and tokens_used > 0:
-                request.user.tokens_used += tokens_used
-                request.user.save()
-
-            if "last_processed_question" in request.session:
-                del request.session["last_processed_question"]
-
-            return redirect("rag_admin")
-
-        return self.get(request)
-
-    def query_rag_backend(self, question, session_id):
-        try:
-            url = f"{settings.RAG_API_BASE_URL}/rag/query/"
-            payload = {
-                "query": question,
-                "session_id": session_id,
-                "use_web_search": True,
-                "enhance_formatting": True,
-            }
-            response = requests.post(url, json=payload, timeout=30)
-            if response.ok:
-                data = response.json()
-                return (
-                    data.get("answer", ""),
-                    data.get("sources", []),
-                    data.get("confidence_score", None),
-                    data.get("web_search_used", False),
-                    data.get("tokens_used", 0),
-                )
-            return f"Error: {response.text}", [], None, False, 0
-        except Exception as e:
-            return f"Error: {str(e)}", [], None, False, 0
-
+    
 
 @method_decorator(csrf_protect, name="dispatch")
 class ClearChatAdmin(View):
@@ -267,8 +191,8 @@ class ClearChatAdmin(View):
             if session_id:
                 memory_manager.clear_session(session_id)
 
-            if SESSION_KEY in request.session:
-                request.session[SESSION_KEY] = []
+            if "SESSION_KEY" in request.session:
+                request.session["SESSION_KEY"] = []
                 request.session.modified = True
 
             if "chat_history" in request.session:
@@ -276,250 +200,9 @@ class ClearChatAdmin(View):
                 request.session.modified = True
         except Exception as e:
             print(f"Error clearing chat: {e}")
+            messages.error(request, f"Error clearing chat: {str(e)}")
 
-        return redirect("rag_admin")
-
-
-# -------------------------
-# User QnA View
-# -------------------------
-
-
-def index_view(request):
-    """Serve the main frontend page"""
-    return render(request, 'index.html')
-
-import uuid
-from django.shortcuts import render, redirect
-from django.views import View
-from django.views.decorators.csrf import csrf_protect
-from django.utils.decorators import method_decorator
-from django.contrib import messages
-from django.conf import settings
-import requests
-
-from .forms import QuestionForm, LLMConfigForm
-from .memory import memory_manager
-from rag.utils import ResponseEnhancer
-
-MAX_TOKENS = 20000
-
-@method_decorator([csrf_protect], name="dispatch")
-class QnAUser(View):
-    template_name = "QnA_user.html"
-
-    # -----------------------------
-    # Helper Methods
-    # -----------------------------
-    def get_system_status(self):
-        try:
-            # API health
-            url = f"{settings.RAG_API_BASE_URL}/rag/health/"
-            response = requests.get(url, timeout=5)
-            api_status = "Online" if response.ok else "Offline"
-            api_status_class = "online" if response.ok else "offline"
-
-            # KB status
-            kb_url = f"{settings.RAG_API_BASE_URL}/rag/knowledge-base/status/"
-            kb_response = requests.get(kb_url, timeout=5)
-            kb_documents = kb_response.json().get("total_documents", 0) if kb_response.ok else 0
-
-        except Exception as e:
-            print(f"System status error: {e}")
-            api_status, api_status_class, kb_documents = "Offline", "offline", 0
-
-        return {
-            "api_status": api_status,
-            "api_status_class": api_status_class,
-            "kb_documents": kb_documents,
-        }
-
-    # def get_recent_queries(self, session_id):
-    #     try:
-    #         memory_vars = memory_manager.get_memory_variables(session_id)
-    #         chat_history = memory_vars.get("chat_history", [])
-    #         user_queries = [
-    #             msg.content for msg in chat_history
-    #             if hasattr(msg, "content") and msg.__class__.__name__ == "HumanMessage"
-    #         ]
-    #         return user_queries[-5:] if len(user_queries) > 5 else user_queries
-    #     except Exception as e:
-    #         print(f"Recent queries error: {e}")
-    #         return []
-
- 
-
-    def query_rag_backend(self, question, session_id, use_web_search=True, enhance_formatting=True):
-        try:
-            url = f"{settings.RAG_API_BASE_URL}/rag/query/"
-            payload = {
-                "query": question,
-                "session_id": session_id,
-                "use_web_search": use_web_search,
-                "enhance_formatting": enhance_formatting
-
-            }
-            response = requests.post(url, json=payload, timeout=30)
-            print(response.json())
-            if response.ok:
-                data = response.json()
-                return (
-                    data.get("answer", "No response received."),
-                    data.get("sources", []),
-                    data.get("confidence_score", None),
-                    data.get("web_search_used", False),
-                    data.get("tokens_used", 0),
-                )
-            return f"Backend error: {response.status_code}", [], None, False, 0
-        except requests.exceptions.Timeout:
-            return "Request timed out. Please try again.", [], None, False, 0
-        except requests.exceptions.ConnectionError:
-            return "Cannot connect to backend service.", [], None, False, 0
-        except Exception as e:
-            print(f"RAG backend exception: {e}")
-            return f"Error: {str(e)}", [], None, False, 0
-
-    # -----------------------------
-    # GET Method
-    # -----------------------------
-    def get(self, request):
-        session_id = request.session.get("session_id", str(uuid.uuid4())) #Checking If already has a session id, otherwise create 1
-        request.session["session_id"] = session_id #Saving it into the Django session
-
-
-#   memory_vars → this is usually a dictionary with things like:
-
-# {
-#     "chat_history": [
-#         HumanMessage(content="Hello"),
-#         AIMessage(content="Hi there, how can I help?"),
-#         ...
-#     ],
-#     "some_other_var": ...
-# }
-
-        # Load chat
-        memory_vars = memory_manager.get_memory_variables(session_id) #Retrieving the memory variables for the given session_id
-        chat_history = memory_vars.get("chat_history", [])
-        chat = []
-        seen_messages = set() #To avoid duplicates
-
-        for msg in chat_history: #Iterating through the chat history messages
-            if msg is None or not hasattr(msg, "content"):  #Skip if message is None or has no content
-                continue
-            msg_id = f"{msg.content}_{msg.__class__.__name__}" #Creating a unique ID for each message based on its content and type
-             #Skip if this message has already been processed (to avoid duplicates)
-            if msg_id in seen_messages: 
-                continue
-            seen_messages.add(msg_id) #Mark this message as seen
-
-            if msg.__class__.__name__ == "HumanMessage":
-                chat.append({"who": "user", "text": msg.content, "timestamp": getattr(msg, "timestamp", None)}) #If it's a user message, add to chat as user
-            elif msg.__class__.__name__ == "AIMessage":
-                chat.append({
-                    "who": "bot",
-                    "text": getattr(msg, "content", ""),
-                    "sources": getattr(msg, "sources", []) or [],
-                    "llm": getattr(msg, "model", "StudyNet AI") or "StudyNet AI",
-                    "confidence": getattr(msg, "confidence", 0) or 0,
-                    "web_search": getattr(msg, "web_search_used", False),
-                    "timestamp": getattr(msg, "timestamp", None),
-                })
-
-        # System status and recent queries
-        system_status = self.get_system_status()
-       
-
-        tokens_used = getattr(request.user, "tokens_used", 0)
-        tokens_remaining = MAX_TOKENS - tokens_used
-        status_msg = f"Backend ready - Tokens remaining: {max(0, tokens_remaining)}"
-
-        context = {
-            "chat": chat,
-            "ask_form": QuestionForm(),
-            "llm_form": LLMConfigForm(),
-            "status_msg": status_msg,
-            "session_id": session_id,
-           
-            "tokens_remaining": max(0, tokens_remaining),
-            "max_tokens": MAX_TOKENS,
-            "api_status": system_status["api_status"],
-            "api_status_class": system_status["api_status_class"],
-            "kb_documents": system_status["kb_documents"],
-        }
-        return render(request, self.template_name, context)
-
-    # -----------------------------
-    # POST Method
-    # -----------------------------
-    def post(self, request):
-        if not request.user.is_authenticated:
-            messages.error(request, "Please log in to use the chat service.")
-            return redirect("login_page")
-
-        ask_form = QuestionForm(request.POST) #Binding the form with the POST data
-        if not ask_form.is_valid():
-            return self.get(request) #If form invalid, re-render page with errors
-
-        question = ask_form.cleaned_data["question"] #Extracting the cleaned question from the form
-        use_web_search = ask_form.cleaned_data.get("use_web_search", True) #Extracting web search preference
-        enhance_formatting = ask_form.cleaned_data.get("enhance_formatting", True) #Extracting formatting preference
-
-        session_id = request.session.get("session_id", str(uuid.uuid4())) #Get or create session ID
-        request.session["session_id"] = session_id
-
-        # Token check
-        tokens_used = getattr(request.user, "tokens_used", 0) #Get user's used tokens
-        if tokens_used >= MAX_TOKENS: #If user has exceeded max tokens
-            memory_manager.add_message(session_id, "user", question) #Log user's question
-            memory_manager.add_message(session_id, "assistant", f"Maximum tokens reached. You have used all {MAX_TOKENS} tokens.")
-            messages.warning(request, f"Token limit reached: {MAX_TOKENS} tokens.")
-            return redirect("rag_user")
-
-        # Prevent duplicate submissions
-        last_question = request.session.get("last_question") #Get last question from session
-        if last_question == question:
-            return redirect("rag_user")
-        request.session["last_question"] = question
-
-        # Query backend
-        answer, sources, confidence, web_search_used, tokens_consumed = self.query_rag_backend(
-            question, session_id, use_web_search, enhance_formatting
-        )
-
-        # Convert markdown to HTML
-        answer_html = ResponseEnhancer._convert_markdown_to_html(answer)
-
-        # Update tokens
-        if tokens_consumed > 0:
-            request.user.tokens_used = tokens_used + tokens_consumed
-            request.user.save()
-
-        # Save messages in memory
-        memory_vars = memory_manager.get_memory_variables(session_id)
-        chat_history = memory_vars.get("chat_history", [])
-        print(chat_history)
-
-        if not (chat_history and hasattr(chat_history[-1], "content") and
-                chat_history[-1].__class__.__name__ == "HumanMessage" and
-                chat_history[-1].content == question):
-            memory_manager.add_message(session_id, "user", question)
-
-        if not (chat_history and hasattr(chat_history[-1], "content") and
-                chat_history[-1].__class__.__name__ == "AIMessage" and
-                chat_history[-1].content == answer_html):
-            ai_message = memory_manager.add_message(session_id, "assistant", answer_html)
-            if hasattr(ai_message, "__dict__"):
-                ai_message.sources = sources
-                ai_message.model = "StudyNet AI"
-                ai_message.confidence = confidence * 100 if confidence else None
-                ai_message.web_search_used = web_search_used
-
-        # Remove last_question to allow new submissions
-        request.session.pop("last_question", None)
-        messages.success(request, f"Response generated successfully. Tokens used: {tokens_consumed}")
-        return redirect("rag_user")
-
+        return redirect("index")
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -530,8 +213,8 @@ class ClearChatUser(View):
             if session_id:
                 memory_manager.clear_session(session_id)
 
-            if SESSION_KEY in request.session:
-                request.session[SESSION_KEY] = []
+            if "SESSION_KEY" in request.session:
+                request.session["SESSION_KEY"] = []
                 request.session.modified = True
 
             if "chat_history" in request.session:
@@ -541,49 +224,13 @@ class ClearChatUser(View):
             print(f"Error clearing chat: {e}")
             messages.error(request, f"Error clearing chat: {str(e)}")
 
-        return redirect("rag_user")
+        return redirect("user")
 
 
 
 
 
 
-
-import os
-import time
-import tempfile
-import logging
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-
-from .models import (
-    QueryRequest, QueryResponse, DocumentUpload, SystemMetrics,
-    KnowledgeBaseStatus, ConversationSession, ChatMessage
-)
-from .serializers import (
-    QueryRequestInputSerializer, QueryResponseOutputSerializer,
-    DocumentUploadInputSerializer, DocumentUploadResponseSerializer,
-    MemoryContextSerializer, SessionsListSerializer, HealthCheckSerializer,
-    KnowledgeBaseReloadSerializer, VectorStoreClearSerializer,
-    SystemMetricsSerializer, KnowledgeBaseStatusSerializer
-)
-from .agent import rag_agent
-from .memory import memory_manager
-from .utils import document_processor, metrics_collector, response_formatter
-from .config import config
-from .vectorstore import vector_store
-
-logger = logging.getLogger(__name__)
 
 
 def index_view(request):
@@ -626,8 +273,8 @@ class QueryProcessView(APIView):
             result = rag_agent.process_query(
                 query=serializer.validated_data['query'],
                 session_id=serializer.validated_data.get('session_id'),
-                use_web_search=serializer.validated_data.get('use_web_search', True),
-                enhance_formatting=serializer.validated_data.get('enhance_formatting', True)
+                use_web_search=serializer.validated_data.get('use_web_search', False),
+                enhance_formatting=serializer.validated_data.get('enhance_formatting', False)
             )
             
             # Calculate response time

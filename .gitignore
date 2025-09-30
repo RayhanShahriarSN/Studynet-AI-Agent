@@ -4,10 +4,13 @@ __pycache__/
 *.pyc
 db.sqlite3
 media/
-staticfiles/
 venv/
 *.log
 .DS_Store
 .idea/  
 .vscode/
 *.sqlite3
+
+vector_store/
+
+vectorstore/

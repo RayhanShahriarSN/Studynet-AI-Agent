@@ -16,201 +16,77 @@
             </a>
             <div class="auth-info">
                 {% if user.is_authenticated %}
+
                     <span class="logged-in-user">Logged in as: {{ user.username }}</span>
-                    <span class="token-info">
+                     <!-- <span class="token-info">
                         Tokens: {{ user.tokens_used|default:0 }}/{{ max_tokens|default:1000 }}
                         {% if tokens_remaining <= 100 %}
                             <span class="token-warning">⚠ Low tokens!</span>
                         {% endif %}
-                    </span>
+
+                    </span> -->
+                    
                 {% endif %}
             </div>
+
+        
+
             <div class="auth-buttons">
                 <a href="{% url 'logout_page' %}" class="signup-btn">LOGOUT</a>
             </div>
         </div>
     </header>
 
-    <!-- Messages Display -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                    <button class="alert-close" onclick="this.parentElement.style.display='none'">×</button>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Chat Container -->
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message">
+                        <div class="welcome-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h1>What can I help you with today?</h1>
+                        <p>Ask me anything and I'll provide detailed, helpful responses</p>
+                        
+                    </div>
+                
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <div class="input-container">
+                        <div class="input-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="useWebSearch" >
+                                <span class="checkmark"></span>
+                                Web Search
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enhanceFormatting" >
+                                <span class="checkmark"></span>
+                                Enhanced Formatting
+                            </label>
+                        </div>
+                        <div class="input-wrapper">
+                            <input type="text" id="queryInput" placeholder="Ask your question..." autocomplete="off">
+                            <button id="sendButton" class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+
+                        <form action="{% url 'clear_chat_user' %}" method="post" class="clear-chat">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-clear">CLEAR CHAT</button>
+                                    </form>
+                    </div>
                 </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="content-wrapper">
-            <div class="signup-container">
-                <div class="signup-card">
-
-                    {% if not chat %}
-                        <!-- Welcome Screen -->
-                        <div class="welcome-screen">
-                            <div class="welcome-content">
-                                <h1 class="welcome-title">What can I help you with today?</h1>
-                                <p class="welcome-subtitle">Ask me anything and I'll provide detailed, helpful responses</p>
-
-                                {% if user.is_authenticated and tokens_remaining <= 0 %}
-                                    <div class="token-limit-reached">
-                                        <p class="error-message">Maximum tokens reached!</p>
-                                        <p>You have used all {{ max_tokens }} tokens. Please contact support.</p>
-                                    </div>
-                                {% else %}
-                                    <form action="{% url 'rag_user' %}" method="post" class="welcome-search-form">
-                                        {% csrf_token %}
-                                        <div class="search-container">
-                                            <svg class="graduation-icon" viewBox="0 0 24 24">
-                                                <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
-                                            </svg>
-                                            {{ ask_form.question }}
-                                            <button type="submit" class="search-icon-container">
-                                                <svg class="search-icon" viewBox="0 0 24 24">
-                                                    <circle cx="11" cy="11" r="8"></circle>
-                                                    <path d="m21 21-4.35-4.35"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </form>
-                                {% endif %}
-
-                                <!-- {% if recent_queries %}
-                                    <div class="recent-queries-section">
-                                        <h4>Recent Queries</h4>
-                                        <div class="recent-queries-list">
-                                            {% for query in recent_queries %}
-                                                <form action="{% url 'rag_user' %}" method="post" class="recent-query-form">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="question" value="{{ query }}">
-                                                    <button type="submit" class="recent-query-btn">{{ query|truncatechars:50 }}</button>
-                                                </form>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                {% endif %} -->
-
-                                <div class="clear-chat">
-                                    <form action="{% url 'clear_chat_user' %}" method="post">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn-clear">CLEAR CHAT</button>
-                                    </form>
-                                    
-                                    <div class="backend-status">
-                                        <div class="status-grid">
-                                            <div class="status-item">
-                                                <span class="status-label">API Status</span>
-                                                <span class="status-value {{ api_status_class }}">{{ api_status }}</span>
-                                            </div>
-                                            <div class="status-item">
-                                                <span class="status-label">Knowledge Base</span>
-                                                <span class="status-value">{{ kb_documents }} docs</span>
-                                            </div>
-                                            <div class="status-item">
-                                                <span class="status-label">Session</span>
-                                                <span class="status-value">{{ session_id|truncatechars:8 }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    {% elif chat %}
-                        <!-- Chat Interface -->
-                        <div class="chat-interface">
-                            <div class="chat-messages">
-                                {% for message in chat %}
-                                    <div class="message-container {{ message.who }}">
-                                        <div class="message-content">
-                                            <div class="message-header">
-                                                <div class="message-avatar">
-                                                    {% if message.who == 'user' %}
-                                                        <span class="avatar-text">{{ user.username }}</span>
-                                                    {% else %}
-                                                        <span class="avatar-icon">🤖</span>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="message-meta">
-                                                    <span class="message-sender">
-                                                        {% if message.who == 'user' %}{{ user.username }}
-                                                        
-                                                        {% else %}
-                                                        StudyNet AI
-                                                        
-                                                        {% endif %}
-                                                    </span>
-
-                                                    {% if message.llm %}
-                                                        <span class="message-model">{{ message.llm }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        <div class="message-text">
-                                                {{ message.text|safe }}
-                            
-                                                {% if message.confidence %}
-                                                    <div class="message-confidence">
-                                                    <strong>Confidence:</strong> {{ message.confidence }}%
-                                                    </div>
-                                                {% endif %}
-                                                {% if message.sources %}
-                                                <div class="message-sources">
-                                                    <h4>Sources:</h4>
-                                                        {% for src in message.sources %}
-                                                        <div class="source-item">
-                                                            <strong>{{ src.type|title }}:</strong> 
-                                                            {{ src.content|truncatechars:150 }}
-                                                        </div>
-                                                        {% endfor %}
-                                                </div>
-                                                {% endif %}
-                                        </div>
-
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-
-                            <!-- Answer Textbox and Buttons -->
-                            {% if not user.is_authenticated or tokens_remaining > 0 %}
-                                <div class="bottom-search-bar">
-                                    <form action="{% url 'rag_user' %}" method="post">
-                                        {% csrf_token %}
-                                        <div class="search-container bottom">
-                                            <input type="text" name="question" placeholder="Type your question..." class="question-input" required>
-                                            <button type="submit" class="search-icon-container">
-                                                <svg class="search-icon" viewBox="0 0 24 24">
-                                                    <circle cx="11" cy="11" r="8"></circle>
-                                                    <path d="m21 21-4.35-4.35"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </form>
-
-                                    <form action="{% url 'clear_chat_user' %}" method="post" class="clear-chat-form">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn-clear">CLEAR CHAT</button>
-                                    </form>
-                                </div>
-                            {% else %}
-                                <div class="bottom-search-bar disabled">
-                                    <p class="token-limit-message">Token limit reached. Cannot send more messages.</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
                 </div>
             </div>
-        </div>
-    </main>
 
-    <!-- Footer -->
+        </main>
+
+<!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-links">
@@ -247,5 +123,52 @@
             </div>
         </div>
     </footer>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/app_user.js' %}"></script>
 </body>
+    
+</body>
+
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

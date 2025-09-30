@@ -102,7 +102,7 @@ def login_page(request):
                 if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
                     return redirect("index")
                 else:
-                    return redirect("index")
+                    return redirect("user")
             else:
                 messages.error(request, "❌ Invalid username or password")
     else:

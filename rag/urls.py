@@ -5,14 +5,15 @@ from rag.views import *
 
 urlpatterns = [
     
-    path("clear-chat/admin", ClearChatAdmin.as_view(), name="clear_chat_admin"),
     path("clear-chat/user", ClearChatUser.as_view(), name="clear_chat_user"),
+   
+    path("clear-chat/admin", ClearChatAdmin.as_view(), name="clear_chat_admin"),
     path("upload-pdf/", UploadPDF.as_view(), name="upload_pdf"),
-    path("user", QnAUser.as_view(), name="rag_user"),
-    path("user2", index_view, name="index"),
-    path("admin", QnAAdmin.as_view(), name="rag_admin"),
-    # Frontend
-    path('', index_view, name='frontend'),
+    
+    path("admin", index_view, name="index"),
+    path("user", user_view, name="user"),
+    
+
     # Health check
     path('health/', HealthCheckView.as_view(), name='health_check'),
     # Core query processing

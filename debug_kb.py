@@ -6,8 +6,8 @@ import django
 # Add the current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Set up Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rag_backend.settings')
+# FIX: Change this line
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'authapi.settings')  # Changed from 'rag_backend.settings'
 django.setup()
 
 from rag.utils import document_processor

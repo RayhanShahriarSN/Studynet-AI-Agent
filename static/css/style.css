@@ -62,21 +62,21 @@ body::before {
 .chat-container {
      background: linear-gradient(
         90deg,
-        #000514 0%,
+        #000000 0%,
         #000924 20%,
         #380052 50%,
         #672162 80%,
         #9B2063 100%
     );
     backdrop-filter: blur(10px);
-    border-radius: 50px;
+    border-radius: 30px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     max-width: 1400px;
     padding: 50px;
-    
+   
     margin-left: 100px ;
 }
 
@@ -119,6 +119,7 @@ body::before {
     margin-bottom: 1.5rem;
     display: flex;
     gap: 1rem;
+    
 }
 
 .message.user {
@@ -150,10 +151,13 @@ body::before {
 .message-content {
     flex: 1;
     max-width: 80%;
+    color: white;
+   
 }
 
 .message.user .message-content {
     text-align: right;
+    
 }
 
 .message-bubble {
@@ -161,6 +165,9 @@ body::before {
     border-radius: 18px;
     word-wrap: break-word;
     line-height: 1.6;
+    margin-left: 20px;
+    opacity: 0.7;
+    
 }
 
 .message.user .message-bubble {
@@ -170,18 +177,19 @@ body::before {
 }
 
 .message.assistant .message-bubble {
-    background: #f7fafc;
-    color: #2d3748;
+   
+    color: white;
     border: 1px solid #e2e8f0;
-    border-bottom-left-radius: 4px;
+    border-radius: 50px;
 }
 
 .message-sources {
     margin-top: 0.75rem;
     padding: 0.75rem;
-    background: rgba(102, 126, 234, 0.05);
+    background: white;
     border-radius: 8px;
     border-left: 3px solid #667eea;
+   
 }
 
 .message-sources h4 {
@@ -205,6 +213,146 @@ body::before {
     gap: 1rem;
     align-items: center;
 }
+
+
+
+.clear-chat {
+    padding: 20px 0;
+    margin-top: 20px;
+    display: flex;
+  
+    justify-content: center;
+}
+
+.btn-clear {
+    padding: 12px 25px;
+    background: #282F43;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.btn-clear:hover {
+    background: white;
+    color: #282F43;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+
+
+/* ===== SETTINGS DROPDOWN ===== */
+.settings-dropdown {
+    position: relative;
+    display: inline-block;
+    margin-left: 900px;
+}
+
+.settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 20px;
+    color: #301934;
+    font-weight: 500;
+    font-size: 17px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    text-decoration: none;
+}
+
+.settings-btn:hover {
+    background: rgba(48, 25, 52, 0.1);
+    color: #672162;
+}
+
+.dropdown-arrow {
+    transition: transform 0.3s ease;
+}
+
+.settings-dropdown:hover .dropdown-arrow {
+    transform: rotate(180deg);
+    
+}
+
+.settings-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    min-width: 180px;
+    
+}
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #301934;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(48, 25, 52, 0.08);
+    white-space: nowrap;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:first-child {
+    border-radius: 12px 12px 0 0;
+}
+
+.dropdown-item:last-child {
+    border-radius: 0 0 12px 12px;
+}
+
+.dropdown-item:only-child {
+    border-radius: 12px;
+}
+
+.dropdown-item:hover {
+    background: rgba(103, 33, 98, 0.08);
+    color: #672162;
+}
+
+.dropdown-item svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.dropdown-item:hover svg {
+    opacity: 1;
+}
+
+.settings-dropdown:hover .settings-dropdown-menu {
+    display: block;
+}
+
+
+
+
+
+
+
+
 
 /* Input Area */
 .input-area {
@@ -1222,12 +1370,14 @@ body::before {
     display: flex;
     align-items: center;
     gap: 15px;
+    margin-left: 200px;
 }
 
 .logged-in-user {
     color: #666;
     font-size: 14px;
     font-weight: 500;
+    
 }
 
 .token-info {
@@ -1260,7 +1410,7 @@ body::before {
 }
 
 .signup-btn {
-    background: #282F43;
+    background: #9B2063;
     color: white;
     padding: 15px 30px;
     border-radius: 25px;
