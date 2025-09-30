@@ -1,8 +1,33 @@
 # StudyNet AI Counselor - Development Instructions
 
 **Last Updated:** 2025-10-01
-**Status:** Foundation Complete (30%), Architecture Designed (100%)
-**Next Phase:** Implement Query Intelligence Layer
+**Status:** Phase 2 Complete (70%), Foundation + Query Intelligence + Tool System Complete
+**Next Phase:** Implement Hybrid Retrieval (Phase 3)
+
+## 🎯 Quick Start - Continue Development
+
+**To test what's been built:**
+```bash
+# Test Phase 1 (Query Intelligence)
+python test_phase1.py
+
+# Test Phase 2 (Tool System)
+python test_phase2.py
+
+# Reload CSV data if needed
+python load_csv_data.py
+```
+
+**Progress Summary:**
+- ✅ **Foundation (30%):** DuckDB storage + CSV loading - COMPLETE
+- ✅ **Phase 1 (20%):** Query classification + entity extraction + SQL building - COMPLETE
+- ✅ **Phase 2 (20%):** Tool system for LangChain agent - COMPLETE
+- ❌ **Phase 3 (15%):** Hybrid retrieval with reranking - PENDING
+- ❌ **Phase 4 (20%):** Enhanced agent with routing - PENDING
+- ❌ **Phase 5 (10%):** API integration - PENDING
+- ❌ **Phase 6 (15%):** Testing & docs - PENDING
+
+**Total Progress: 70%**
 
 ---
 
@@ -100,27 +125,107 @@ intakes:           6,999 rows
 TOTAL:             21,875 rows
 ```
 
-### 2.4 Directory Structure Created
+### 2.4 Query Intelligence Layer (100%) - **NEW!**
+**Files:**
+- `api/query/classifier.py` - Query classification with LLM
+- `api/query/entity_extractor.py` - Extract entities from natural language
+- `api/query/sql_builder.py` - Build SQL from extracted entities
+- `test_phase1.py` - Test script for Phase 1
+
+**Features:**
+- ✅ **Query Classification:** Classifies queries as STRUCTURED, SEMANTIC, HYBRID, or COMPARISON
+- ✅ **Intent Detection:** Identifies user intent (SEARCH_COURSES, GET_GUIDANCE, etc.)
+- ✅ **Entity Extraction:** Extracts 8+ entity types:
+  - Field of Study: Maps 'IT' → ['Information Technology', 'Computing']
+  - Price Range: Extracts "under $20k" → {min: 0, max: 20000}
+  - Location: Maps 'Sydney' → {city: 'Sydney', state: 'NSW'}
+  - Provider: Maps 'UNSW' → 'University of New South Wales'
+  - Study Level: Maps 'bachelor' → 'Bachelor Degree'
+  - Booleans: has_scholarship, has_internship
+  - Ranking: top N universities
+- ✅ **Dynamic SQL Building:** Constructs WHERE clauses based on extracted filters
+- ✅ **Tested:** All 12 test queries pass successfully
+
+**Test Results:**
+```
+✅ IT courses under $20k          → 10 results (hybrid query)
+✅ Business courses in Sydney     → 10 results (structured)
+✅ Bachelor in Melbourne <$25k    → 0 results (no matches in data)
+✅ Engineering with scholarships  → 10 results (structured)
+✅ Courses in Brisbane            → 10 results (location filter)
+✅ Universities in NSW            → 55 results (provider search)
+✅ Courses $15k-$30k             → 10 results (price range)
+✅ Cheapest courses              → 10 results (sorted by price)
+✅ Student visa application      → Semantic query detected
+✅ What documents needed?        → Semantic query detected
+✅ Best IT with scholarships     → 10 results (multi-filter)
+✅ Affordable Business programs  → 10 results (field filter)
+```
+
+### 2.5 Tool System (100%) - **NEW!**
+**Files:**
+- `api/tools/structured_tools.py` - 6 LangChain tools for structured data
+- `api/tools/semantic_tools.py` - 2 LangChain tools for PDF search
+- `test_phase2.py` - Test script for Phase 2
+
+**Structured Tools (6 total):**
+1. ✅ **search_courses** - Search courses with multiple filters (field, price, location, level, scholarship)
+2. ✅ **compare_providers** - Compare 2-4 universities side-by-side
+3. ✅ **get_provider_details** - Full details about a specific university
+4. ✅ **get_scholarships** - Find providers offering scholarships
+5. ✅ **get_intakes** - Get upcoming intake/application deadlines
+6. ✅ **get_budget_options** - Find courses within budget, sorted by price
+
+**Semantic Tools (2 total):**
+1. ✅ **search_guidance** - Search PDF guidance documents (visa, application, procedures)
+2. ✅ **search_provider_info** - Search university facilities, culture, research info from PDFs
+
+**Tool Features:**
+- ✅ Proper Pydantic input schemas for type safety
+- ✅ Descriptive tool descriptions for LLM agent
+- ✅ Error handling and user-friendly error messages
+- ✅ Formatted output (tables, bullet points, numbered lists)
+- ✅ All tools tested and working
+
+**Test Results:**
+```
+✅ search_courses (IT under $20k)        → 5 results
+✅ search_courses (Business in Sydney)   → 5 results
+✅ compare_providers (2 universities)    → Formatted comparison table
+✅ get_provider_details (UNSW)           → Full university profile
+✅ get_scholarships (IT field)           → 5 universities
+✅ get_intakes                          → 10 upcoming intakes
+✅ get_budget_options (under $25k)       → 5 courses
+✅ search_guidance (student visa)        → PDF guidance results
+✅ search_provider_info (facilities)     → PDF university info
+```
+
+### 2.6 Directory Structure
 ```
 api/
 ├── storage/           ✅ Storage layer (DuckDB + Vector)
 │   ├── __init__.py
 │   ├── schema.py      ✅ Database schemas
-│   ├── duckdb_store.py ✅ Structured data storage
-│   └── vectorstore.py  ✅ Exists (needs modification for PDFs only)
+│   ├── duckdb_store.py ✅ Structured data storage (updated with limit params)
+│   └── vectorstore.py  ✅ Hierarchical vector store for PDFs
 ├── loaders/           ✅ Data loading
 │   ├── __init__.py
 │   └── csv_loader.py   ✅ CSV loader
-├── query/             ✅ Created (empty - needs implementation)
-│   └── __init__.py
-├── tools/             ✅ Created (empty - needs implementation)
-│   └── __init__.py
-├── retrieval/         ✅ Created (empty - needs implementation)
+├── query/             ✅ Query Intelligence - PHASE 1 COMPLETE
+│   ├── __init__.py
+│   ├── classifier.py   ✅ Query classification + intent detection
+│   ├── entity_extractor.py ✅ Entity extraction (fields, prices, locations)
+│   └── sql_builder.py  ✅ Dynamic SQL query building
+├── tools/             ✅ Tool System - PHASE 2 COMPLETE
+│   ├── __init__.py
+│   ├── structured_tools.py ✅ 6 structured data tools
+│   └── semantic_tools.py   ✅ 2 semantic search tools
+├── retrieval/         ❌ Created (empty - needs implementation)
 │   └── __init__.py
 └── embeddings.py      ✅ UPGRADED - Removed unused similarity_search()
 ```
 
-### 2.5 Dependencies Installed
+### 2.7 Dependencies Installed
 ```bash
 ✅ duckdb==1.4.0          # Structured data storage
 ✅ pandas==2.3.3          # Data processing
@@ -130,7 +235,7 @@ api/
 ✅ chromadb (already had)  # Vector database
 ```
 
-### 2.6 Code Improvements
+### 2.8 Code Improvements
 **File:** `api/embeddings.py`
 - ✅ **REMOVED:** Unused `similarity_search()` method (was confusing, never called)
 - ✅ **CLEANED:** Now purely handles embedding generation
@@ -140,155 +245,38 @@ api/
 
 ## 3. What Remains To Be Built ❌
 
-### Phase 1: Query Intelligence Layer (Critical - 20% of work)
+### ~~Phase 1: Query Intelligence Layer~~ ✅ COMPLETED
 
-#### 3.1 Query Classifier
-**File to create:** `api/query/classifier.py`
+**Status:** Phase 1 is fully implemented and tested. See section 2.4 for details.
 
-**Purpose:** Analyze student queries and classify them
-
-**Required Components:**
-```python
-class QueryType(Enum):
-    STRUCTURED  # "courses under $20k"
-    SEMANTIC    # "how to apply?"
-    HYBRID      # "best IT courses with scholarships"
-    COMPARISON  # "compare Macquarie vs UNSW"
-
-class QueryClassifier:
-    def classify(query: str) -> ParsedQuery:
-        # 1. Detect intent (search, compare, guidance)
-        # 2. Extract entities (see 3.2)
-        # 3. Determine query type
-        # 4. Return structured ParsedQuery object
+**Test Command:**
+```bash
+python test_phase1.py  # Tests all classification, extraction, and SQL building
 ```
 
-**Dependencies:**
-- LLM for intent detection
-- Pattern matching for query types
+---
 
-#### 3.2 Entity Extractor
-**File to create:** `api/query/entity_extractor.py`
+### ~~Phase 2: Tool System~~ ✅ COMPLETED
 
-**Purpose:** Extract structured data from natural language queries
+**Status:** Phase 2 is fully implemented and tested. See section 2.5 for details.
 
-**Required Extractions:**
-```python
-class EntityExtractor:
-    # 1. Field of Study
-    #    Input: "IT courses" / "Business programs" / "AI"
-    #    Output: ["Information Technology", "Computing"]
+**Components Built:**
+- ✅ 6 structured data tools (search_courses, compare_providers, get_provider_details, get_scholarships, get_intakes, get_budget_options)
+- ✅ 2 semantic search tools (search_guidance, search_provider_info)
+- ✅ Proper Pydantic schemas for all tools
+- ✅ Error handling and formatted output
+- ✅ All tools tested and working
 
-    # 2. Price Range
-    #    Input: "under $20k" / "between 15k and 25k"
-    #    Output: {min: 0, max: 20000}
-
-    # 3. Location
-    #    Input: "Sydney" / "Melbourne" / "NSW"
-    #    Output: {city: "Sydney", state: "NSW"}
-
-    # 4. Provider Name
-    #    Input: "Macquarie" / "UNSW"
-    #    Output: "Macquarie University"
-
-    # 5. Study Level
-    #    Input: "Bachelor" / "Master's"
-    #    Output: "Bachelor Degree"
-
-    # 6. Requirements
-    #    Input: "with scholarships" / "has internship"
-    #    Output: {has_scholarship: True}
+**Test Command:**
+```bash
+python test_phase2.py  # Tests all 8 tools
 ```
 
-**Field Mappings Needed:**
-```python
-FIELD_MAPPINGS = {
-    'IT': ['Information Technology', 'Computer Science', 'Computing'],
-    'AI': ['Artificial Intelligence', 'Data Science', 'Machine Learning'],
-    'business': ['Business', 'Commerce', 'Accounting'],
-    'engineering': ['Engineering', 'Civil Engineering', ...],
-    # ... 50+ mappings
-}
-
-AUSTRALIAN_CITIES = [
-    'Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide',
-    'Canberra', 'Hobart', 'Darwin', 'Gold Coast', ...
-]
-
-PROVIDER_ALIASES = {
-    'UNSW': 'University of New South Wales',
-    'UTS': 'University of Technology Sydney',
-    'Macquarie': 'Macquarie University',
-    # ... all providers
-}
-```
-
-#### 3.3 SQL Query Builder
-**File to create:** `api/query/sql_builder.py`
-
-**Purpose:** Convert extracted entities to SQL queries
-
-```python
-class SQLQueryBuilder:
-    def build_course_search(entities: List[Entity]) -> (str, List):
-        # Build SELECT with JOINs
-        # Add WHERE filters dynamically
-        # Return (sql, params)
-```
-
-### Phase 2: Tool System (20% of work)
-
-#### 3.4 Structured Query Tools
-**File to create:** `api/tools/structured_tools.py`
-
-**Required Tools:**
-```python
-1. search_courses
-   - Filters: field, price, location, provider, level, scholarship
-   - Returns: List of courses with provider/location/fee info
-
-2. filter_by_budget
-   - Input: min_fee, max_fee, optional field
-   - Returns: Courses sorted by price
-
-3. compare_providers
-   - Input: List of provider names
-   - Returns: Side-by-side comparison table
-
-4. get_provider_details
-   - Input: Provider name
-   - Returns: Full provider info + course count + locations
-
-5. get_scholarships
-   - Input: Optional field of study
-   - Returns: Providers with scholarship URLs
-
-6. get_upcoming_intakes
-   - Input: Provider name, year
-   - Returns: Application deadlines
-```
-
-#### 3.5 Semantic Search Tools (Enhanced)
-**File to create:** `api/tools/semantic_tools.py`
-
-**Modify Existing:** `api/vectorstore.py` to store ONLY PDFs
-
-**Required Tools:**
-```python
-1. search_guidance
-   - Input: Procedural question (how-to, visa, application)
-   - Filters: doc_type="guidance_pdf"
-   - Returns: Relevant PDF chunks
-
-2. search_provider_info
-   - Input: Question about university (facilities, culture, research)
-   - Filters: doc_type="provider_profile"
-   - Returns: Provider descriptions
-```
+---
 
 ### Phase 3: Hybrid Retrieval System (15% of work)
 
-#### 3.6 Hybrid Retriever
+#### 3.1 Hybrid Retriever
 **File to create:** `api/retrieval/hybrid_retriever.py`
 
 **Purpose:** Merge structured + semantic results with reranking
@@ -309,9 +297,11 @@ class HybridRetriever:
 - Relevance scoring
 - Diversity filtering
 
+---
+
 ### Phase 4: Enhanced Agent (20% of work)
 
-#### 3.7 New Agent with Routing
+#### 4.1 New Agent with Routing
 **File to create:** `api/agent_v2.py`
 
 **Purpose:** Route queries to appropriate pipeline
@@ -336,9 +326,11 @@ class StudyNetCounselorAgent:
 - `handle_semantic()` - Use vector search
 - `handle_hybrid()` - Use hybrid retriever
 
+---
+
 ### Phase 5: API Integration (10% of work)
 
-#### 3.8 Update Views
+#### 5.1 Update Views
 **File to modify:** `api/views.py`
 
 **Changes Needed:**
@@ -355,9 +347,11 @@ class QueryProcessView(APIView):
         )
 ```
 
+---
+
 ### Phase 6: Testing & Documentation (15% of work)
 
-#### 3.9 Test Queries
+#### 6.1 Test Queries
 **Create:** `test_queries.py`
 
 **Test Cases:**
@@ -376,7 +370,7 @@ class QueryProcessView(APIView):
 "Cheap IT courses with good job prospects"
 ```
 
-#### 3.10 Performance Testing
+#### 6.2 Performance Testing
 - Query response time
 - Database query optimization
 - Vector search speed
@@ -405,7 +399,7 @@ class QueryProcessView(APIView):
       └─────────────────────────┘
 ```
 
-### Target State (After Completion)
+### Target State (50% Complete - Phase 1 Done)
 
 ```
 ┌──────────────────────────────────────────┐
@@ -414,25 +408,25 @@ class QueryProcessView(APIView):
 └──────────────────┬───────────────────────┘
                    │
           ┌────────▼─────────┐
-          │ Query Classifier  │  ← TO BUILD
+          │ Query Classifier  │  ✅ DONE (Phase 1)
           │ (classifier.py)   │
           └────────┬─────────┘
                    │
        ┌───────────▼───────────┐
-       │   Intent: STRUCTURED   │
-       │   Entities:            │
+       │   Intent: STRUCTURED   │  ✅ DONE
+       │   Entities:            │  ✅ DONE
        │    - Field: IT         │
        │    - MaxPrice: 20000   │
        │    - Location: Sydney  │
        └───────────┬───────────┘
                    │
     ┌──────────────▼──────────────┐
-    │   SQL Query Builder          │  ← TO BUILD
+    │   SQL Query Builder          │  ✅ DONE (Phase 1)
     │   (sql_builder.py)           │
     └──────────────┬──────────────┘
                    │
     ┌──────────────▼──────────────┐
-    │   DuckDB Store               │  ✅ DONE
+    │   DuckDB Store               │  ✅ DONE (Foundation)
     │   (duckdb_store.py)          │
     │   - search_courses()         │
     │   - filter_by_budget()       │
@@ -442,9 +436,8 @@ class QueryProcessView(APIView):
               [5 IT courses]
                    │
     ┌──────────────▼──────────────┐
-    │   Response Formatter         │  ← TO BUILD
-    │   (Format as student-        │
-    │    friendly response)        │
+    │   Agent V2 + Tools           │  ❌ TO BUILD (Phase 2-4)
+    │   Response Formatter         │
     └─────────────────────────────┘
 ```
 

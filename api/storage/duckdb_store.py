@@ -237,7 +237,16 @@ class DuckDBStore:
 
         query = """
             SELECT
-                p.*,
+                p.provider_id,
+                p.provider_name,
+                p.company_name,
+                p.provider_type,
+                p.public_private,
+                p.australian_ranking,
+                p.global_ranking,
+                p.website_url,
+                p.scholarship_url,
+                p.recognised_area_of_study,
                 COUNT(DISTINCT c.course_id) as total_courses,
                 COUNT(DISTINCT l.campus_id) as campus_count,
                 STRING_AGG(DISTINCT l.address_city, ', ') as cities
@@ -245,11 +254,15 @@ class DuckDBStore:
             LEFT JOIN courses c ON p.provider_id = c.provider_id
             LEFT JOIN campus_locations l ON p.provider_id = l.provider_id
             WHERE p.provider_name LIKE ?
-            GROUP BY p.provider_id
+            GROUP BY p.provider_id, p.provider_name, p.company_name, p.provider_type,
+                     p.public_private, p.australian_ranking, p.global_ranking,
+                     p.website_url, p.scholarship_url, p.recognised_area_of_study
         """
 
         results = self.execute(query, [f"%{provider_name}%"])
-        return results[0] if results else None
+        if results and len(results) > 0:
+            return results[0]
+        return None
 
     def get_courses_by_budget(self,
                              min_budget: float = 0,
@@ -287,7 +300,7 @@ class DuckDBStore:
 
         return self.execute(query, params)
 
-    def get_scholarships(self, field_of_study: Optional[str] = None) -> List[Dict]:
+    def get_scholarships(self, field_of_study: Optional[str] = None, limit: int = 20) -> List[Dict]:
         """Find providers with scholarships"""
 
         query = """
@@ -295,7 +308,7 @@ class DuckDBStore:
                 p.provider_name,
                 p.scholarship_url,
                 p.australian_ranking,
-                COUNT(DISTINCT c.course_id) as courses_with_scholarship,
+                COUNT(DISTINCT c.course_id) as scholarship_courses,
                 STRING_AGG(DISTINCT l.address_city, ', ') as cities
             FROM providers p
             LEFT JOIN courses c ON p.provider_id = c.provider_id AND c.has_scholarship = TRUE
@@ -309,23 +322,25 @@ class DuckDBStore:
             query += " AND c.area_of_study_broad LIKE ?"
             params.append(f"%{field_of_study}%")
 
-        query += """
+        query += f"""
             GROUP BY p.provider_id, p.provider_name, p.scholarship_url, p.australian_ranking
-            ORDER BY courses_with_scholarship DESC
+            ORDER BY scholarship_courses DESC
+            LIMIT {limit}
         """
 
         return self.execute(query, params)
 
     def get_upcoming_intakes(self,
                             provider_name: Optional[str] = None,
-                            year: Optional[int] = None) -> List[Dict]:
+                            year: Optional[int] = None,
+                            limit: int = 20) -> List[Dict]:
         """Get upcoming intake dates"""
 
         query = """
             SELECT
                 i.provider_name,
                 i.year,
-                i.commencement_date,
+                i.commencement_date as intake_date,
                 i.application_deadline,
                 i.orientation_date,
                 i.is_open,
@@ -345,7 +360,7 @@ class DuckDBStore:
             query += " AND i.year = ?"
             params.append(year)
 
-        query += " ORDER BY i.commencement_date ASC"
+        query += f" ORDER BY i.commencement_date ASC LIMIT {limit}"
 
         return self.execute(query, params)
 
