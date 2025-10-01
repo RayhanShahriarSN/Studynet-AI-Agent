@@ -28,6 +28,7 @@ from .serializers import (
     SystemMetricsSerializer, KnowledgeBaseStatusSerializer
 )
 from .agent import rag_agent
+from .agent_v2 import get_agent_v2  # NEW: Enhanced agent
 from .memory import memory_manager
 from .utils import document_processor, metrics_collector, response_formatter
 from .config import config
@@ -72,13 +73,24 @@ class QueryProcessView(APIView):
         start_time = time.time()
         
         try:
-            # Process query through RAG agent with enhanced formatting
-            result = rag_agent.process_query(
-                query=serializer.validated_data['query'],
-                session_id=serializer.validated_data.get('session_id'),
-                use_web_search=serializer.validated_data.get('use_web_search', True),
-                enhance_formatting=serializer.validated_data.get('enhance_formatting', True)
-            )
+            # Check if we should use the new agent (v2) or fallback to old agent
+            use_v2 = serializer.validated_data.get('use_v2_agent', True)
+
+            if use_v2:
+                # Use new enhanced agent with query routing
+                agent_v2 = get_agent_v2()
+                result = agent_v2.process_query(
+                    query=serializer.validated_data['query'],
+                    session_id=serializer.validated_data.get('session_id', 'default')
+                )
+            else:
+                # Fallback to old RAG agent
+                result = rag_agent.process_query(
+                    query=serializer.validated_data['query'],
+                    session_id=serializer.validated_data.get('session_id'),
+                    use_web_search=serializer.validated_data.get('use_web_search', True),
+                    enhance_formatting=serializer.validated_data.get('enhance_formatting', True)
+                )
             
             # Calculate response time
             response_time = time.time() - start_time
@@ -92,11 +104,12 @@ class QueryProcessView(APIView):
             
             # Format response
             response_data = {
-                "answer": result["answer"],
+                "answer": result.get("answer", ""),
                 "sources": result.get("sources", []),
                 "confidence_score": result.get("confidence_score", 0.5),
                 "web_search_used": result.get("web_search_used", False),
-                "session_id": result["session_id"]
+                "session_id": result.get("session_id", serializer.validated_data.get('session_id', 'default')),
+                "metadata": result.get("metadata", {})
             }
             
             return Response(response_data)
