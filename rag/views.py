@@ -107,6 +107,7 @@ SESSION_KEY = "chat_history"
 # -------------------------
 # PDF Upload View
 # -------------------------
+@method_decorator(csrf_protect, name="dispatch")
 class UploadPDF(View):
     template_name = "uploadPDF.html"
 
@@ -114,18 +115,18 @@ class UploadPDF(View):
         form = PDFUploadForm()
         RAG_PDF_DIR.mkdir(parents=True, exist_ok=True)
 
-        allowed_files = ["*.pdf", "*.csv"]
         uploaded_files = []
-        for pattern in allowed_files:
-            for file_path in RAG_PDF_DIR.glob(pattern):
+        for file_path in RAG_PDF_DIR.glob("*.*"):
+            if file_path.suffix.lower() in [".pdf", ".csv"]:
                 relative_url = f"{settings.MEDIA_URL}pdfs/{file_path.name}"
                 uploaded_files.append({
                     "name": file_path.name,
                     "url": relative_url,
                     "abs_url": request.build_absolute_uri(relative_url)
                 })
+
         return render(request, self.template_name, {"form": form, "pdf_files": uploaded_files})
-        
+
     def post(self, request):
         form = PDFUploadForm(request.POST, request.FILES)
         if not form.is_valid():
@@ -134,6 +135,7 @@ class UploadPDF(View):
         uploaded_file = form.cleaned_data["pdf_file"]
         RAG_PDF_DIR.mkdir(parents=True, exist_ok=True)
 
+        # Ensure unique, valid file name
         base_name, ext = os.path.splitext(uploaded_file.name)
         base_name = get_valid_filename(base_name) or "document"
         ext = ext.lower()
@@ -143,18 +145,18 @@ class UploadPDF(View):
             candidate = RAG_PDF_DIR / f"{base_name}_{i}{ext}"
             i += 1
 
-        # Save file
+        # Save uploaded file
         with open(candidate, "wb+") as f:
             for chunk in uploaded_file.chunks():
                 f.write(chunk)
 
         messages.success(request, f"File uploaded: {candidate.name}")
 
-        # Process file and add to RAG vector store
+        # --- Automatically process and embed into vector store ---
         try:
             documents = document_processor.load_document(str(candidate))
             if not documents:
-                messages.warning(request, f"{candidate.name} uploaded but could not extract content.")
+                messages.warning(request, f"{candidate.name} uploaded but no content could be extracted.")
             else:
                 success = rag_agent.add_documents(documents)
                 if success:
@@ -171,11 +173,12 @@ class UploadPDF(View):
 # Admin QnA View
 # -------------------------
 
-
+@csrf_protect
 def user_view(request):
     """Serve the admin QnA frontend page"""
     return render(request, 'QnA_user.html')
 
+@csrf_protect
 def index_view(request):
     """Serve the main frontend page"""
     return render(request, 'index.html')
@@ -227,15 +230,6 @@ class ClearChatUser(View):
         return redirect("user")
 
 
-
-
-
-
-
-
-def index_view(request):
-    """Serve the main frontend page"""
-    return render(request, 'index.html')
 
 
 class HealthCheckView(APIView):
