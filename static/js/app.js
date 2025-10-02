@@ -185,8 +185,8 @@ class RAGAgent {
                 body: JSON.stringify({
                     query: query,
                     session_id: this.sessionId,
-                    use_web_search: !!this.elements.useWebSearch?.checked,
-                    enhance_formatting: !!this.elements.enhanceFormatting?.checked
+                    use_web_search: this.elements.useWebSearch?.checked,
+                    enhance_formatting: this.elements.enhanceFormatting?.checked
                 })
             });
 
@@ -904,7 +904,3 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style); 'block';
-
-
-
-
