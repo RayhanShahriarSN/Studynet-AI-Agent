@@ -1,252 +1,605 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RAG AI Agent - Studynet</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
     <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-brain"></i>
-                    <h1>RAG AI Agent</h1>
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-brain"></i>
+            <h1>RAG AI Agent</h1>
+          </div>
+          <div class="header-actions">
+            <button id="clearChat" class="btn btn-secondary">
+              <i class="fas fa-trash"></i> Clear Chat
+            </button>
+            <button id="uploadDoc" class="btn btn-primary">
+              <i class="fas fa-upload"></i> Upload Document
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Chat Container -->
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+              <div class="welcome-icon">
+                <i class="fas fa-robot"></i>
+              </div>
+              <h2>Welcome to RAG AI Agent</h2>
+              <p>
+                Ask me anything about your documents or get help with Studynet
+                CRM processes.
+              </p>
+              <div class="feature-highlights">
+                <div class="feature">
+                  <i class="fas fa-search"></i>
+                  <span>Document Search</span>
                 </div>
-                <div class="header-actions">
-                    <button id="clearChat" class="btn btn-secondary">
-                        <i class="fas fa-trash"></i> Clear Chat
-                    </button>
-                    <button id="uploadDoc" class="btn btn-primary">
-                        <i class="fas fa-upload"></i> Upload Document
-                    </button>
+                <div class="feature">
+                  <i class="fas fa-globe"></i>
+                  <span>Web Search</span>
                 </div>
+                <div class="feature">
+                  <i class="fas fa-memory"></i>
+                  <span>Memory Context</span>
+                </div>
+              </div>
             </div>
-        </header>
+          </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Chat Container -->
-            <div class="chat-container">
-                <div class="chat-messages" id="chatMessages">
-                    <div class="welcome-message">
-                        <div class="welcome-icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <h2>Welcome to RAG AI Agent</h2>
-                        <p>Ask me anything about your documents or get help with Studynet CRM processes.</p>
-                        <div class="feature-highlights">
-                            <div class="feature">
-                                <i class="fas fa-search"></i>
-                                <span>Document Search</span>
-                            </div>
-                            <div class="feature">
-                                <i class="fas fa-globe"></i>
-                                <span>Web Search</span>
-                            </div>
-                            <div class="feature">
-                                <i class="fas fa-memory"></i>
-                                <span>Memory Context</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Input Area -->
-                <div class="input-area">
-                    <div class="input-container">
-                        <div class="input-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="useWebSearch" checked>
-                                <span class="checkmark"></span>
-                                Web Search
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="enhanceFormatting" checked>
-                                <span class="checkmark"></span>
-                                Enhanced Formatting
-                            </label>
-                        </div>
-                        <div class="input-wrapper">
-                            <input type="text" id="queryInput" placeholder="Ask your question..." autocomplete="off">
-                            <button id="sendButton" class="send-btn">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+          <!-- Input Area -->
+          <div class="input-area">
+            <div class="input-container">
+              <div class="input-options">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="useWebSearch" checked />
+                  <span class="checkmark"></span>
+                  Web Search
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="enhanceFormatting" checked />
+                  <span class="checkmark"></span>
+                  Enhanced Formatting
+                </label>
+              </div>
+              <div class="input-wrapper">
+                <input
+                  type="text"
+                  id="queryInput"
+                  placeholder="Ask your question..."
+                  autocomplete="off"
+                />
+                <button id="sendButton" class="send-btn">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <div class="sidebar-section">
-                    <h3><i class="fas fa-chart-line"></i> System Status</h3>
-                    <div class="status-card">
-                        <div class="status-item">
-                            <span class="status-label">API Status</span>
-                            <span class="status-value" id="apiStatus">Checking...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Knowledge Base</span>
-                            <span class="status-value" id="kbStatus">Loading...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Active Sessions</span>
-                            <span class="status-value" id="sessionCount">-</span>
-                        </div>
-                    </div>
-                </div>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-section">
+            <h3><i class="fas fa-chart-line"></i> System Status</h3>
+            <div class="status-card">
+              <div class="status-item">
+                <span class="status-label">API Status</span>
+                <span class="status-value" id="apiStatus">Checking...</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">Knowledge Base</span>
+                <span class="status-value" id="kbStatus">Loading...</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">Active Sessions</span>
+                <span class="status-value" id="sessionCount">-</span>
+              </div>
+            </div>
+          </div>
 
-                <div class="sidebar-section">
-                    <h3><i class="fas fa-cog"></i> Settings</h3>
-                    <div class="settings-card">
-                        <div class="setting-item">
-                            <label>Session ID</label>
-                            <input type="text" id="sessionId" placeholder="Auto-generated" readonly>
-                        </div>
-                        <div class="setting-item">
-                            <label>Response Time</label>
-                            <span id="responseTime">-</span>
-                        </div>
-                    </div>
-                </div>
+          <div class="sidebar-section">
+            <h3><i class="fas fa-cog"></i> Settings</h3>
+            <div class="settings-card">
+              <div class="setting-item">
+                <label>Session ID</label>
+                <input
+                  type="text"
+                  id="sessionId"
+                  placeholder="Auto-generated"
+                  readonly
+                />
+              </div>
+              <div class="setting-item">
+                <label>Response Time</label>
+                <span id="responseTime">-</span>
+              </div>
+            </div>
+          </div>
 
-                <div class="sidebar-section">
-                    <h3><i class="fas fa-history"></i> Recent Queries</h3>
-                    <div class="recent-queries" id="recentQueries">
-                        <p class="no-queries">No recent queries</p>
-                    </div>
-                </div>
-            </aside>
-        </main>
+          <div class="sidebar-section">
+            <h3><i class="fas fa-history"></i> Recent Queries</h3>
+            <div class="recent-queries" id="recentQueries">
+              <p class="no-queries">No recent queries</p>
+            </div>
+          </div>
+        </aside>
+      </main>
     </div>
 
     <!-- Upload Modal -->
     <div id="uploadModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Upload Document</h3>
-                <button class="close-btn" id="closeModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="upload-area" id="uploadArea">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Drag and drop your document here or click to browse</p>
-                    <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.csv,.json" hidden>
-                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                        Choose File
-                    </button>
-                </div>
-                <div class="upload-progress" id="uploadProgress" style="display: none;">
-                    <div class="progress-bar">
-                        <div class="progress-fill"></div>
-                    </div>
-                    <p>Uploading and processing document...</p>
-                </div>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Upload Document</h3>
+          <button class="close-btn" id="closeModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <div class="upload-area" id="uploadArea">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Drag and drop your document here or click to browse</p>
+            <input
+              type="file"
+              id="fileInput"
+              accept=".pdf,.txt,.docx,.csv,.json"
+              hidden
+            />
+            <button
+              class="btn btn-primary"
+              onclick="document.getElementById('fileInput').click()"
+            >
+              Choose File
+            </button>
+          </div>
+          <div
+            class="upload-progress"
+            id="uploadProgress"
+            style="display: none"
+          >
+            <div class="progress-bar">
+              <div class="progress-fill"></div>
+            </div>
+            <p>Uploading and processing document...</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
-        <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>Processing your request...</p>
-        </div>
+      <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Processing your request...</p>
+      </div>
     </div>
 
     <!-- Developer Mode Toggle -->
-    <button id="developerToggle" class="developer-toggle" title="Developer Mode">
-        <i class="fas fa-code"></i>
+    <button
+      id="developerToggle"
+      class="developer-toggle"
+      title="Developer Mode"
+    >
+      <i class="fas fa-code"></i>
     </button>
 
-    <!-- Developer Mode Panel -->
+    <!-- Developer Dashboard Panel -->
     <div id="developerMode" class="developer-mode">
-        <div class="developer-header">
-            <h2><i class="fas fa-code"></i> Developer Mode</h2>
-            <p>Advanced tools and debugging features</p>
-            <button class="dev-close" id="closeDeveloperMode">&times;</button>
+      <div class="developer-header">
+        <h2><i class="fas fa-chart-line"></i> Developer Dashboard</h2>
+        <p>Complete system analytics and monitoring</p>
+        <button class="dev-close" id="closeDeveloperMode">&times;</button>
+      </div>
+
+      <div class="developer-content">
+        <!-- Dashboard Navigation -->
+        <div class="dashboard-nav">
+          <button class="nav-btn active" data-section="overview">
+            <i class="fas fa-tachometer-alt"></i> Overview
+          </button>
+          <button class="nav-btn" data-section="analytics">
+            <i class="fas fa-chart-bar"></i> Analytics
+          </button>
+          <button class="nav-btn" data-section="reports">
+            <i class="fas fa-file-alt"></i> Reports
+          </button>
+          <button class="nav-btn" data-section="data">
+            <i class="fas fa-database"></i> Data Management
+          </button>
+          <button class="nav-btn" data-section="monitoring">
+            <i class="fas fa-heartbeat"></i> Monitoring
+          </button>
+          <button class="nav-btn" data-section="memory">
+            <i class="fas fa-memory"></i> Memory
+          </button>
         </div>
-        
-        <div class="developer-content">
-            <!-- Memory Management Section -->
-            <div class="dev-section">
-                <h3><i class="fas fa-memory"></i> Memory Management</h3>
-                <input type="text" id="devSessionId" class="dev-input" placeholder="Session ID (optional)">
-                <button class="dev-button" id="getMemory">
-                    <i class="fas fa-download"></i> Get Memory for Session
-                </button>
-                <button class="dev-button danger" id="clearMemory">
-                    <i class="fas fa-trash"></i> Clear Session Memory
-                </button>
-                <button class="dev-button" id="listSessions">
-                    <i class="fas fa-list"></i> List All Sessions
-                </button>
-                <div id="memoryOutput" class="dev-output" style="display: none;"></div>
+
+        <!-- Overview Section -->
+        <div id="overview-section" class="dashboard-section active">
+          <div class="dashboard-grid">
+            <!-- Main Dashboard -->
+            <div class="dashboard-card full-width">
+              <h3><i class="fas fa-tachometer-alt"></i> Complete Dashboard</h3>
+              <button class="dev-button" id="getMainDashboard">
+                <i class="fas fa-download"></i> Load Complete Dashboard
+              </button>
+              <div class="chart-container" style="margin-top: 1rem">
+                <canvas
+                  id="mainDashboardChart"
+                  width="400"
+                  height="200"
+                ></canvas>
+              </div>
+              <div
+                id="mainDashboardOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
             </div>
 
-            <!-- Knowledge Base Section -->
-            <div class="dev-section">
-                <h3><i class="fas fa-database"></i> Knowledge Base</h3>
-                <button class="dev-button" id="getKbStatus">
-                    <i class="fas fa-info-circle"></i> Knowledge Base Status
-                </button>
-                <button class="dev-button success" id="reloadKb">
-                    <i class="fas fa-sync"></i> Reload Knowledge Base
-                </button>
-                <button class="dev-button danger" id="clearVectorStore">
-                    <i class="fas fa-broom"></i> Clear Vector Store
-                </button>
-                <div id="kbOutput" class="dev-output" style="display: none;"></div>
+            <!-- Token Usage -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-coins"></i> Token Usage</h3>
+              <div class="input-group">
+                <label>Days:</label>
+                <input
+                  type="number"
+                  id="tokenDays"
+                  class="dev-input"
+                  value="30"
+                  min="1"
+                  max="365"
+                />
+              </div>
+              <div class="input-group">
+                <label>Session ID:</label>
+                <input
+                  type="text"
+                  id="tokenSessionId"
+                  class="dev-input"
+                  placeholder="Optional"
+                />
+              </div>
+              <button class="dev-button" id="getTokenUsage">
+                <i class="fas fa-chart-line"></i> Get Token Usage
+              </button>
+              <div class="chart-container" style="margin-top: 1rem">
+                <canvas id="tokenUsageChart" width="300" height="150"></canvas>
+              </div>
+              <div
+                id="tokenUsageOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
             </div>
 
-            <!-- System Metrics Section -->
-            <div class="dev-section">
-                <h3><i class="fas fa-chart-bar"></i> System Metrics</h3>
-                <button class="dev-button" id="getMetrics">
-                    <i class="fas fa-chart-line"></i> Get System Metrics
-                </button>
-                <button class="dev-button" id="resetMetrics">
-                    <i class="fas fa-redo"></i> Reset Metrics
-                </button>
-                <div id="metricsOutput" class="dev-output" style="display: none;"></div>
+            <!-- Cost Breakdown -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-dollar-sign"></i> Cost Breakdown</h3>
+              <div class="input-group">
+                <label>Limit:</label>
+                <input
+                  type="number"
+                  id="costLimit"
+                  class="dev-input"
+                  value="10"
+                  min="1"
+                  max="100"
+                />
+              </div>
+              <div class="input-group">
+                <label>Order:</label>
+                <select id="costOrder" class="dev-input">
+                  <option value="cost">By Cost</option>
+                  <option value="date">By Date</option>
+                </select>
+              </div>
+              <button class="dev-button" id="getCostBreakdown">
+                <i class="fas fa-calculator"></i> Get Cost Breakdown
+              </button>
+              <div
+                id="costBreakdownOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
             </div>
-
-            <!-- API Testing Section -->
-            <div class="dev-section">
-                <h3><i class="fas fa-flask"></i> API Testing</h3>
-                <input type="text" id="testEndpoint" class="dev-input" placeholder="API Endpoint (e.g., /api/health/)">
-                <button class="dev-button" id="testApi">
-                    <i class="fas fa-play"></i> Test API Endpoint
-                </button>
-                <div id="apiTestOutput" class="dev-output" style="display: none;"></div>
-            </div>
-
-            <!-- Debug Info Section -->
-            <div class="dev-section">
-                <h3><i class="fas fa-bug"></i> Debug Info</h3>
-                <div class="dev-status" id="connectionStatus">
-                    <i class="fas fa-circle"></i>
-                    <span>Connection: Checking...</span>
-                </div>
-                <div class="dev-status" id="lastRequest">
-                    <i class="fas fa-clock"></i>
-                    <span>Last Request: None</span>
-                </div>
-                <div class="dev-status" id="errorCount">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>Errors: 0</span>
-                </div>
-            </div>
+          </div>
         </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics-section" class="dashboard-section">
+          <div class="dashboard-grid">
+            <!-- Query Analytics -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-search"></i> Query Analytics</h3>
+              <div class="input-group">
+                <label>Days:</label>
+                <input
+                  type="number"
+                  id="queryDays"
+                  class="dev-input"
+                  value="7"
+                  min="1"
+                  max="365"
+                />
+              </div>
+              <button class="dev-button" id="getQueryAnalytics">
+                <i class="fas fa-chart-pie"></i> Get Query Analytics
+              </button>
+              <div class="chart-container" style="margin-top: 1rem">
+                <canvas
+                  id="queryAnalyticsChart"
+                  width="300"
+                  height="150"
+                ></canvas>
+              </div>
+              <div
+                id="queryAnalyticsOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+
+            <!-- Data Source Statistics -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-database"></i> Data Sources</h3>
+              <button class="dev-button" id="getDataSourceStats">
+                <i class="fas fa-table"></i> Get Data Source Stats
+              </button>
+              <div
+                id="dataSourceOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reports-section" class="dashboard-section">
+          <div class="dashboard-grid">
+            <!-- System Report -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-clipboard-check"></i> System Report</h3>
+              <button class="dev-button" id="getSystemReport">
+                <i class="fas fa-file-alt"></i> Get System Report
+              </button>
+              <div
+                id="systemReportOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+
+            <!-- Usage Report -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-chart-line"></i> Usage Report</h3>
+              <button class="dev-button" id="getUsageReport">
+                <i class="fas fa-trending-up"></i> Get Usage Report
+              </button>
+              <div
+                id="usageReportOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Management Section -->
+        <div id="data-section" class="dashboard-section">
+          <div class="dashboard-grid">
+            <!-- File Upload -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-upload"></i> File Upload</h3>
+              <div class="upload-controls">
+                <input
+                  type="file"
+                  id="csvUpload"
+                  accept=".csv"
+                  style="display: none"
+                />
+                <input
+                  type="file"
+                  id="docUpload"
+                  accept=".pdf,.docx"
+                  style="display: none"
+                />
+                <button
+                  class="dev-button"
+                  onclick="document.getElementById('csvUpload').click()"
+                >
+                  <i class="fas fa-file-csv"></i> Upload CSV
+                </button>
+                <button
+                  class="dev-button"
+                  onclick="document.getElementById('docUpload').click()"
+                >
+                  <i class="fas fa-file-pdf"></i> Upload Document
+                </button>
+              </div>
+              <div
+                id="uploadOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+
+            <!-- SQL Export -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-download"></i> SQL Export</h3>
+              <div class="input-group">
+                <label>SQL Query:</label>
+                <textarea
+                  id="sqlQuery"
+                  class="dev-input"
+                  rows="3"
+                  placeholder="SELECT * FROM table_name"
+                ></textarea>
+              </div>
+              <button class="dev-button" id="exportSql">
+                <i class="fas fa-file-export"></i> Export to CSV
+              </button>
+              <div
+                id="sqlExportOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monitoring Section -->
+        <div id="monitoring-section" class="dashboard-section">
+          <div class="dashboard-grid">
+            <!-- Health Check -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-heartbeat"></i> Health Check</h3>
+              <button class="dev-button" id="getHealthCheck">
+                <i class="fas fa-stethoscope"></i> Check Health
+              </button>
+              <div
+                id="healthOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+
+            <!-- System Metrics -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-chart-bar"></i> System Metrics</h3>
+              <button class="dev-button" id="getSystemMetrics">
+                <i class="fas fa-tachometer-alt"></i> Get Metrics
+              </button>
+              <button class="dev-button danger" id="resetSystemMetrics">
+                <i class="fas fa-redo"></i> Reset Metrics
+              </button>
+              <div
+                id="systemMetricsOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+
+            <!-- Knowledge Base Status -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-database"></i> Knowledge Base</h3>
+              <button class="dev-button" id="getKbStatus">
+                <i class="fas fa-info-circle"></i> KB Status
+              </button>
+              <button class="dev-button success" id="reloadKb">
+                <i class="fas fa-sync"></i> Reload KB
+              </button>
+              <button class="dev-button danger" id="clearVectorStore">
+                <i class="fas fa-broom"></i> Clear Vector Store
+              </button>
+              <div id="kbOutput" class="dev-output" style="display: none"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory Section -->
+        <div id="memory-section" class="dashboard-section">
+          <div class="dashboard-grid">
+            <!-- Memory Management -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-memory"></i> Memory Management</h3>
+              <div class="input-group">
+                <label>Session ID:</label>
+                <input
+                  type="text"
+                  id="devSessionId"
+                  class="dev-input"
+                  placeholder="Session ID (optional)"
+                />
+              </div>
+              <button class="dev-button" id="getMemory">
+                <i class="fas fa-download"></i> Get Memory
+              </button>
+              <button class="dev-button danger" id="clearMemory">
+                <i class="fas fa-trash"></i> Clear Memory
+              </button>
+              <button class="dev-button" id="listSessions">
+                <i class="fas fa-list"></i> List Sessions
+              </button>
+              <div
+                id="memoryOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+
+            <!-- Query Processing -->
+            <div class="dashboard-card">
+              <h3><i class="fas fa-comments"></i> Query Processing</h3>
+              <div class="input-group">
+                <label>Query:</label>
+                <textarea
+                  id="testQuery"
+                  class="dev-input"
+                  rows="3"
+                  placeholder="Enter your query here"
+                ></textarea>
+              </div>
+              <div class="input-group">
+                <label>Session ID:</label>
+                <input
+                  type="text"
+                  id="querySessionId"
+                  class="dev-input"
+                  placeholder="Optional"
+                />
+              </div>
+              <button class="dev-button" id="processQuery">
+                <i class="fas fa-play"></i> Process Query
+              </button>
+              <div
+                id="queryOutput"
+                class="dev-output"
+                style="display: none"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Debug Info Section -->
+        <div class="dev-section">
+          <h3><i class="fas fa-bug"></i> Debug Info</h3>
+          <div class="dev-status" id="connectionStatus">
+            <i class="fas fa-circle"></i>
+            <span>Connection: Checking...</span>
+          </div>
+          <div class="dev-status" id="lastRequest">
+            <i class="fas fa-clock"></i>
+            <span>Last Request: None</span>
+          </div>
+          <div class="dev-status" id="errorCount">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Errors: 0</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Scripts -->
     <script src="{% static 'js/app.js' %}"></script>
-</body>
+  </body>
 </html>

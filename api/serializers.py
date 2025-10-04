@@ -145,3 +145,124 @@ class VectorStoreClearSerializer(serializers.Serializer):
     """Serializer for vector store clear response"""
     status = serializers.CharField()
     message = serializers.CharField()
+
+
+# ============================================================================
+# NEW: Serializers for Analytics, CSV Upload, and Reporting
+# ============================================================================
+
+from .models import QueryAnalytics, DataSourceStats, CSVUpload, AgentInteraction
+
+
+class QueryAnalyticsSerializer(serializers.ModelSerializer):
+    """Serializer for query analytics"""
+
+    class Meta:
+        model = QueryAnalytics
+        fields = '__all__'
+        read_only_fields = ['created_at']
+
+
+class DataSourceStatsSerializer(serializers.ModelSerializer):
+    """Serializer for data source statistics"""
+
+    class Meta:
+        model = DataSourceStats
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class CSVUploadSerializer(serializers.ModelSerializer):
+    """Serializer for CSV uploads"""
+
+    class Meta:
+        model = CSVUpload
+        fields = '__all__'
+        read_only_fields = ['uploaded_at']
+
+
+class AgentInteractionSerializer(serializers.ModelSerializer):
+    """Serializer for agent interactions"""
+
+    class Meta:
+        model = AgentInteraction
+        fields = '__all__'
+        read_only_fields = ['created_at']
+
+
+# Input/Output Serializers for new endpoints
+
+class CSVUploadInputSerializer(serializers.Serializer):
+    """Input serializer for CSV upload"""
+    file = serializers.FileField()
+    table_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    uploaded_by = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class CSVUploadResponseSerializer(serializers.Serializer):
+    """Response serializer for CSV upload"""
+    status = serializers.CharField()
+    message = serializers.CharField()
+    table_name = serializers.CharField()
+    row_count = serializers.IntegerField()
+    column_count = serializers.IntegerField()
+    columns = serializers.ListField(child=serializers.CharField())
+
+
+class AnalyticsQueryStatsSerializer(serializers.Serializer):
+    """Serializer for query analytics statistics"""
+    total_queries = serializers.IntegerField()
+    sql_queries = serializers.IntegerField()
+    rag_queries = serializers.IntegerField()
+    hybrid_queries = serializers.IntegerField()
+    avg_response_time_ms = serializers.FloatField()
+    avg_confidence_score = serializers.FloatField()
+    success_rate = serializers.FloatField()
+    total_tools_used = serializers.IntegerField()
+
+
+class AnalyticsSourceStatsSerializer(serializers.Serializer):
+    """Serializer for data source analytics"""
+    total_sources = serializers.IntegerField()
+    csv_tables = serializers.IntegerField()
+    documents = serializers.IntegerField()
+    total_rows = serializers.IntegerField()
+    total_chunks = serializers.IntegerField()
+    sources = serializers.ListField(child=DataSourceStatsSerializer())
+
+
+class SystemReportSerializer(serializers.Serializer):
+    """Serializer for system health report"""
+    system_status = serializers.CharField()
+    uptime_info = serializers.DictField()
+    database_stats = serializers.DictField()
+    vector_store_stats = serializers.DictField()
+    sql_engine_stats = serializers.DictField()
+    memory_usage = serializers.DictField()
+    recent_errors = serializers.ListField()
+
+
+class UsageReportSerializer(serializers.Serializer):
+    """Serializer for usage report"""
+    time_period = serializers.CharField()
+    total_queries = serializers.IntegerField()
+    unique_sessions = serializers.IntegerField()
+    query_breakdown = serializers.DictField()
+    tool_usage = serializers.DictField()
+    top_queries = serializers.ListField()
+    performance_metrics = serializers.DictField()
+
+
+class SQLExportInputSerializer(serializers.Serializer):
+    """Input serializer for SQL export"""
+    query = serializers.CharField()
+    format = serializers.ChoiceField(choices=['csv', 'json'], default='csv')
+    filename = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class SQLExportResponseSerializer(serializers.Serializer):
+    """Response serializer for SQL export"""
+    status = serializers.CharField()
+    filename = serializers.CharField()
+    row_count = serializers.IntegerField()
+    download_url = serializers.CharField(required=False)

@@ -143,5 +143,85 @@ class ConversationMemoryManager:
         """Get all active session IDs"""
         return list(ConversationSession.objects.values_list('session_id', flat=True))
 
+    def get_session_stats(self, session_id: str) -> Dict:
+        """Get statistics for a session
+
+        Args:
+            session_id: Session ID
+
+        Returns:
+            Dictionary with session statistics
+        """
+        try:
+            session = ConversationSession.objects.get(session_id=session_id)
+            messages = session.messages.all()
+
+            user_messages = messages.filter(role='user').count()
+            assistant_messages = messages.filter(role='assistant').count()
+
+            return {
+                'session_id': session_id,
+                'total_messages': messages.count(),
+                'user_messages': user_messages,
+                'assistant_messages': assistant_messages,
+                'total_tokens': session.total_tokens,
+                'created_at': session.created_at.isoformat(),
+                'updated_at': session.updated_at.isoformat(),
+                'duration_minutes': (session.updated_at - session.created_at).total_seconds() / 60
+            }
+        except ConversationSession.DoesNotExist:
+            return {'error': f'Session {session_id} not found'}
+
+    def export_session_history(self, session_id: str) -> str:
+        """Export session conversation history as formatted text
+
+        Args:
+            session_id: Session ID
+
+        Returns:
+            Formatted conversation history
+        """
+        try:
+            session = ConversationSession.objects.get(session_id=session_id)
+            messages = session.messages.all()
+
+            output = f"=== Session {session_id} ===\n"
+            output += f"Created: {session.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            output += f"Total Messages: {messages.count()}\n"
+            output += f"Total Tokens: {session.total_tokens}\n"
+            output += "="  * 50 + "\n\n"
+
+            for msg in messages:
+                timestamp = msg.timestamp.strftime('%H:%M:%S')
+                role = msg.role.upper()
+                output += f"[{timestamp}] {role}:\n{msg.content}\n\n"
+
+            return output
+
+        except ConversationSession.DoesNotExist:
+            return f"Session {session_id} not found"
+
+    def get_recent_sessions(self, limit: int = 10) -> List[Dict]:
+        """Get most recent active sessions
+
+        Args:
+            limit: Maximum number of sessions to return
+
+        Returns:
+            List of session info dictionaries
+        """
+        sessions = ConversationSession.objects.all().order_by('-updated_at')[:limit]
+
+        result = []
+        for session in sessions:
+            result.append({
+                'session_id': session.session_id,
+                'message_count': session.messages.count(),
+                'total_tokens': session.total_tokens,
+                'last_updated': session.updated_at.isoformat()
+            })
+
+        return result
+
 # Singleton instance
 memory_manager = ConversationMemoryManager()

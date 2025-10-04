@@ -39,4 +39,24 @@ class Config:
     RERANK_TOP_N: int = 3  # Number of documents after reranking
     SIMILARITY_THRESHOLD: float = 0.7  # Minimum similarity score
 
+    # NEW: Hybrid Retrieval Parameters
+    BM25_K1: float = 1.5  # BM25 k1 parameter
+    BM25_B: float = 0.75  # BM25 b parameter
+    SEMANTIC_WEIGHT: float = 0.6  # Weight for semantic search in hybrid (0-1)
+    USE_CROSS_ENCODER: bool = True  # Enable cross-encoder reranking
+    CROSS_ENCODER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+    # NEW: Query Enhancement Parameters
+    ENABLE_QUERY_ENHANCEMENT: bool = True  # Enable query enhancement
+    ENABLE_QUERY_CLASSIFICATION: bool = True  # Enable query classification
+    MAX_QUERY_VARIATIONS: int = 3  # Number of query variations to generate
+
+    # NEW: SQL Engine Parameters
+    SQL_QUERY_LIMIT: int = 100  # Default limit for SQL queries
+    ENABLE_SQL_CACHE: bool = False  # Cache SQL query results (future feature)
+
+    # NEW: Analytics Parameters
+    ENABLE_ANALYTICS: bool = True  # Track query analytics
+    ANALYTICS_RETENTION_DAYS: int = 30  # Keep analytics for 30 days
+
 config = Config()

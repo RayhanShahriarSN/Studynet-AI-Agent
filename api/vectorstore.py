@@ -48,20 +48,40 @@ class HierarchicalVectorStore:
     def add_documents(self, documents: List[Document]) -> List[str]:
         """Add documents with hierarchical chunking"""
         all_parent_ids = []
-        
+
         for doc in documents:
+            # Skip empty documents
+            if not doc.page_content or len(doc.page_content.strip()) == 0:
+                continue
+
             # Create parent chunks
-            parent_chunks = self.parent_splitter.split_text(doc.page_content)
-            
+            try:
+                parent_chunks = self.parent_splitter.split_text(doc.page_content)
+            except Exception as e:
+                # If chunking fails, use entire content as one chunk
+                parent_chunks = [doc.page_content]
+
             for parent_chunk in parent_chunks:
+                # Skip empty chunks
+                if not parent_chunk or len(parent_chunk.strip()) == 0:
+                    continue
+
                 parent_id = str(uuid.uuid4())
-                
+
                 # Create child chunks from parent
-                child_chunks = self.child_splitter.split_text(parent_chunk)
+                try:
+                    child_chunks = self.child_splitter.split_text(parent_chunk)
+                except Exception as e:
+                    # If chunking fails, use entire parent as one child
+                    child_chunks = [parent_chunk]
+
                 child_ids = []
-                
+
                 # Add child chunks
                 for i, child_chunk in enumerate(child_chunks):
+                    if not child_chunk or len(child_chunk.strip()) == 0:
+                        continue
+
                     child_id = f"{parent_id}_child_{i}"
                     child_doc = Document(
                         page_content=child_chunk,
@@ -74,22 +94,24 @@ class HierarchicalVectorStore:
                     )
                     self.child_store.add_documents([child_doc], ids=[child_id])
                     child_ids.append(child_id)
-                
-                # Add parent chunk
-                parent_doc = Document(
-                    page_content=parent_chunk,
-                    metadata={
-                        **doc.metadata,
-                        "chunk_type": "parent",
-                        "num_children": len(child_ids)
-                    }
-                )
-                self.parent_store.add_documents([parent_doc], ids=[parent_id])
-                
-                # Store mapping
-                self.parent_child_map[parent_id] = child_ids
-                all_parent_ids.append(parent_id)
-        
+
+                # Only add parent if we have children
+                if child_ids:
+                    # Add parent chunk
+                    parent_doc = Document(
+                        page_content=parent_chunk,
+                        metadata={
+                            **doc.metadata,
+                            "chunk_type": "parent",
+                            "num_children": len(child_ids)
+                        }
+                    )
+                    self.parent_store.add_documents([parent_doc], ids=[parent_id])
+
+                    # Store mapping
+                    self.parent_child_map[parent_id] = child_ids
+                    all_parent_ids.append(parent_id)
+
         return all_parent_ids
     
     def similarity_search_with_score(self, query: str, k: int = 5, 

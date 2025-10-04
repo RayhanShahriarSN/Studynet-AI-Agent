@@ -118,9 +118,154 @@ class KnowledgeBaseStatus(models.Model):
     data_source = models.CharField(max_length=200)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-updated_at']
-    
+
     def __str__(self):
         return f"KB Status: {self.total_documents} documents"
+
+
+class QueryAnalytics(models.Model):
+    """Analytics for query processing"""
+
+    class QueryTypeChoices(models.TextChoices):
+        STRUCTURED_SQL = 'structured_sql', 'Structured SQL'
+        SEMANTIC_RAG = 'semantic_rag', 'Semantic RAG'
+        HYBRID = 'hybrid', 'Hybrid'
+        UNKNOWN = 'unknown', 'Unknown'
+
+    session_id = models.CharField(max_length=255, db_index=True)
+    query_text = models.TextField()
+    query_type = models.CharField(
+        max_length=20,
+        choices=QueryTypeChoices.choices,
+        default=QueryTypeChoices.UNKNOWN
+    )
+    classification_method = models.CharField(max_length=20, default='keyword')  # keyword or llm
+
+    # Performance metrics
+    response_time_ms = models.IntegerField(default=0)
+
+    # Token usage metrics
+    tokens_used = models.IntegerField(default=0)
+    prompt_tokens = models.IntegerField(default=0)
+    completion_tokens = models.IntegerField(default=0)
+    total_cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0.0)
+
+    # Tool usage
+    tools_used = JSONField(default=list, blank=True)  # List of tool names
+    sql_used = models.BooleanField(default=False)
+    rag_used = models.BooleanField(default=False)
+    web_search_used = models.BooleanField(default=False)
+
+    # Results
+    sources_count = models.IntegerField(default=0)
+    confidence_score = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        default=0.5
+    )
+    success = models.BooleanField(default=True)
+    error_message = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['query_type', 'created_at']),
+            models.Index(fields=['session_id', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.query_type} query at {self.created_at}"
+
+
+class DataSourceStats(models.Model):
+    """Statistics about data sources (CSV tables and document collections)"""
+
+    class SourceTypeChoices(models.TextChoices):
+        CSV_TABLE = 'csv_table', 'CSV Table'
+        PDF_DOCUMENT = 'pdf_document', 'PDF Document'
+        DOCX_DOCUMENT = 'docx_document', 'DOCX Document'
+        TEXT_DOCUMENT = 'text_document', 'Text Document'
+        VECTOR_STORE = 'vector_store', 'Vector Store'
+
+    source_name = models.CharField(max_length=255, unique=True)
+    source_type = models.CharField(
+        max_length=20,
+        choices=SourceTypeChoices.choices
+    )
+
+    # Size metrics
+    row_count = models.IntegerField(default=0)  # For CSV tables
+    chunk_count = models.IntegerField(default=0)  # For documents
+    file_size_kb = models.IntegerField(default=0)
+
+    # Usage metrics
+    query_count = models.IntegerField(default=0)
+    last_queried_at = models.DateTimeField(null=True, blank=True)
+
+    # Metadata
+    columns = JSONField(default=list, blank=True)  # For CSV: list of column names
+    metadata = JSONField(default=dict, blank=True)  # Additional metadata
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['source_name']
+        verbose_name_plural = 'Data source stats'
+
+    def __str__(self):
+        return f"{self.source_name} ({self.source_type})"
+
+
+class CSVUpload(models.Model):
+    """Track CSV file uploads"""
+    original_filename = models.CharField(max_length=255)
+    table_name = models.CharField(max_length=255, unique=True)
+    file_size_bytes = models.IntegerField(default=0)
+    row_count = models.IntegerField(default=0)
+    column_count = models.IntegerField(default=0)
+    columns = JSONField(default=list, blank=True)
+
+    uploaded_by = models.CharField(max_length=255, blank=True, null=True)
+    uploaded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.original_filename} → {self.table_name}"
+
+
+class AgentInteraction(models.Model):
+    """Track agent interactions and tool usage"""
+    session_id = models.CharField(max_length=255, db_index=True)
+    query = models.TextField()
+
+    # Agent response
+    response = models.TextField()
+    response_time_ms = models.IntegerField(default=0)
+
+    # Classification
+    query_classification = JSONField(default=dict, blank=True)
+
+    # Enhancement
+    query_enhancement = JSONField(default=dict, blank=True)
+
+    # Tool execution details
+    intermediate_steps = JSONField(default=list, blank=True)  # List of tool calls and results
+
+    # Final metrics
+    total_tokens = models.IntegerField(default=0)
+    success = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Interaction at {self.created_at}"

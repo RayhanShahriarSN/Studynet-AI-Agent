@@ -14,6 +14,13 @@ from langchain_community.document_loaders import (
 import hashlib
 import json
 
+# Docling imports for advanced document processing
+try:
+    from docling.document_converter import DocumentConverter
+    DOCLING_AVAILABLE = True
+except ImportError:
+    DOCLING_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -24,17 +31,60 @@ logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
     """Utility class for processing various document types"""
-    
+
     @staticmethod
-    def load_document(file_path: str, file_type: Optional[str] = None) -> List[Document]:
-        """Load document based on file type"""
-        
+    def load_document_with_docling(file_path: str) -> List[Document]:
+        """Load document using Docling for advanced processing (PDF, DOCX, PPTX, HTML)"""
+        if not DOCLING_AVAILABLE:
+            raise ImportError("Docling is not installed. Install with: pip install docling")
+
+        try:
+            converter = DocumentConverter()
+            result = converter.convert(file_path)
+
+            # Export to markdown for better structure preservation
+            markdown_text = result.document.export_to_markdown()
+
+            # Create Document with enhanced metadata
+            doc = Document(
+                page_content=markdown_text,
+                metadata={
+                    'source_file': os.path.basename(file_path),
+                    'file_type': os.path.splitext(file_path)[1].lower().lstrip('.'),
+                    'processing_method': 'docling',
+                    'doc_id': DocumentProcessor.generate_doc_id(markdown_text),
+                    'has_structure': True
+                }
+            )
+
+            return [doc]
+
+        except Exception as e:
+            logger.error(f"Error loading document with Docling {file_path}: {e}")
+            raise
+
+    @staticmethod
+    def load_document(file_path: str, file_type: Optional[str] = None, use_docling: bool = True) -> List[Document]:
+        """Load document based on file type
+
+        Args:
+            file_path: Path to the document
+            file_type: Optional file type override
+            use_docling: If True, use Docling for PDF/DOCX (better quality)
+        """
+
         if not file_type:
             # Detect file type from extension
             _, ext = os.path.splitext(file_path)
             file_type = ext.lower().lstrip('.')
-        
+
         try:
+            # Use Docling for PDF and DOCX if available and enabled
+            if use_docling and DOCLING_AVAILABLE and file_type in ['pdf', 'docx', 'pptx']:
+                logger.info(f"Using Docling for {file_type} processing")
+                return DocumentProcessor.load_document_with_docling(file_path)
+
+            # Fallback to traditional loaders
             if file_type in ['txt', 'text']:
                 loader = TextLoader(file_path)
             elif file_type == 'pdf':
@@ -51,17 +101,18 @@ class DocumentProcessor:
                 )
             else:
                 raise ValueError(f"Unsupported file type: {file_type}")
-            
+
             documents = loader.load()
-            
+
             # Add metadata
             for doc in documents:
                 doc.metadata['source_file'] = os.path.basename(file_path)
                 doc.metadata['file_type'] = file_type
+                doc.metadata['processing_method'] = 'legacy'
                 doc.metadata['doc_id'] = DocumentProcessor.generate_doc_id(doc.page_content)
-            
+
             return documents
-            
+
         except Exception as e:
             logger.error(f"Error loading document {file_path}: {e}")
             raise
