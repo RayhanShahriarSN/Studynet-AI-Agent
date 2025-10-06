@@ -517,13 +517,20 @@ Remember: You're not just providing information - you're a trusted counselor hel
 
             # Step 3: Prepare chat history
             chat_history = []
-            if context:
+            if context and isinstance(context, str):
                 # Parse context into message format
-                for line in context.split('\n'):
-                    if line.startswith('User:'):
-                        chat_history.append(("human", line.replace('User:', '').strip()))
-                    elif line.startswith('Assistant:'):
-                        chat_history.append(("ai", line.replace('Assistant:', '').strip()))
+                lines = context.split('\n')
+                for line in lines:
+                    # Ensure line is a valid non-empty string
+                    if line and isinstance(line, str) and len(line.strip()) > 0:
+                        try:
+                            if line.startswith('User:'):
+                                chat_history.append(("human", line.replace('User:', '').strip()))
+                            elif line.startswith('Assistant:'):
+                                chat_history.append(("ai", line.replace('Assistant:', '').strip()))
+                        except (AttributeError, TypeError) as e:
+                            logger.warning(f"Error parsing context line: {e}")
+                            continue
 
             # Step 4: Execute agent
             result = self.agent_executor.invoke({
@@ -531,7 +538,14 @@ Remember: You're not just providing information - you're a trusted counselor hel
                 "chat_history": chat_history
             })
 
-            answer = result.get("output", "I couldn't process your query properly.")
+            # Extract answer with robust null handling
+            answer = result.get("output") if result else None
+            if not answer or answer is None:
+                answer = "I couldn't process your query properly."
+
+            # Ensure answer is a string
+            if not isinstance(answer, str):
+                answer = str(answer) if answer else "I couldn't generate a response."
 
             # Extract sources and metadata
             sources = []
@@ -541,26 +555,31 @@ Remember: You're not just providing information - you're a trusted counselor hel
 
             if "intermediate_steps" in result:
                 for action, observation in result["intermediate_steps"]:
-                    tool_name = action.tool
-                    tools_used.append(tool_name)
+                    try:
+                        tool_name = action.tool if hasattr(action, 'tool') else str(action)
+                        tools_used.append(tool_name)
 
-                    if tool_name in ['sql_query', 'get_sql_schema', 'table_preview']:
-                        sql_used = True
-                        sources.append({
-                            "type": "sql",
-                            "tool": tool_name,
-                            "content": str(observation)[:200]
-                        })
-                    elif tool_name == 'rag_search':
-                        rag_used = True
-                        sources.append({
-                            "type": "rag",
-                            "tool": tool_name,
-                            "content": str(observation)[:200]
-                        })
+                        if tool_name in ['sql_query', 'get_sql_schema', 'table_preview']:
+                            sql_used = True
+                            sources.append({
+                                "type": "sql",
+                                "tool": tool_name,
+                                "content": str(observation)[:200] if observation else ""
+                            })
+                        elif tool_name == 'rag_search':
+                            rag_used = True
+                            sources.append({
+                                "type": "rag",
+                                "tool": tool_name,
+                                "content": str(observation)[:200] if observation else ""
+                            })
+                    except Exception as e:
+                        logger.warning(f"Error processing intermediate step: {e}")
+                        continue
 
-            # Add response to memory
-            self.memory_manager.add_message(session_id, "assistant", answer)
+            # Add response to memory (only if answer is valid)
+            if answer and isinstance(answer, str) and len(answer.strip()) > 0:
+                self.memory_manager.add_message(session_id, "assistant", answer)
 
             # Summarize if needed
             self.memory_manager.summarize_if_needed(session_id)
@@ -578,7 +597,9 @@ Remember: You're not just providing information - you're a trusted counselor hel
             }
 
         except Exception as e:
+            import traceback
             logger.error(f"Error processing query: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 "answer": f"I encountered an error processing your query: {str(e)}",
                 "sources": [],

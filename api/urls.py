@@ -7,6 +7,7 @@ app_name = 'api'
 urlpatterns = [
     # Frontend
     path('', views.index_view, name='frontend'),
+    path('developer/', views.developer_dashboard_view, name='developer_dashboard_page'),
 
     # Health check
     path('health/', views.HealthCheckView.as_view(), name='health_check'),

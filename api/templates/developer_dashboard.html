@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Dashboard - RAG AI Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #e0e7ff;
+            color: #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #c7d2fe;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-card h3 {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .metric-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            color: white;
+            font-size: 24px;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h2 {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .data-sources-table {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .data-sources-table h2 {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-csv {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-pdf {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-docx {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+
+        .loading i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .time-filter {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .time-filter button {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .time-filter button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .time-filter button:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .cost-breakdown {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .cost-breakdown h2 {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .cost-item:hover {
+            background: #f9fafb;
+        }
+
+        .cost-query {
+            flex: 1;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .cost-tokens {
+            color: #6b7280;
+            font-size: 13px;
+            margin-right: 20px;
+        }
+
+        .cost-amount {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .upload-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .upload-card h2 {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .upload-section {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f9fafb;
+            transform: translateY(-2px);
+        }
+
+        .upload-section i {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-section h3 {
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        .upload-section p {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .upload-status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .upload-status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .upload-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .upload-status.loading {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <i class="fas fa-chart-line"></i>
+                Developer Dashboard
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="window.location.href='/api/'">
+                    <i class="fas fa-home"></i> Back to Chat
+                </button>
+                <button class="btn btn-primary" onclick="refreshDashboard()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div>
+                <i class="fas fa-spinner"></i>
+            </div>
+            <div>Loading dashboard data...</div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboardContent" style="display: none;">
+            <!-- Time Filter -->
+            <div class="time-filter">
+                <button class="active" data-days="7" onclick="setTimeFilter(7, this)">7 Days</button>
+                <button data-days="30" onclick="setTimeFilter(30, this)">30 Days</button>
+                <button data-days="90" onclick="setTimeFilter(90, this)">90 Days</button>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div class="metrics-grid">
+                <!-- Token Usage -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <h3>Total Tokens</h3>
+                    <div class="metric-value" id="totalTokens">0</div>
+                    <div class="metric-label">Across all queries</div>
+                </div>
+
+                <!-- Total Cost -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h3>Total Cost</h3>
+                    <div class="metric-value" id="totalCost">$0.00</div>
+                    <div class="metric-label">API usage cost</div>
+                </div>
+
+                <!-- Total Queries -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Total Queries</h3>
+                    <div class="metric-value" id="totalQueries">0</div>
+                    <div class="metric-label">Processed queries</div>
+                </div>
+
+                <!-- Success Rate -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Success Rate</h3>
+                    <div class="metric-value" id="successRate">0%</div>
+                    <div class="metric-label">Successful queries</div>
+                </div>
+
+                <!-- Avg Response Time -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Avg Response Time</h3>
+                    <div class="metric-value" id="avgResponseTime">0ms</div>
+                    <div class="metric-label">Average latency</div>
+                </div>
+
+                <!-- Avg Confidence -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Avg Confidence</h3>
+                    <div class="metric-value" id="avgConfidence">0.0</div>
+                    <div class="metric-label">Response quality</div>
+                </div>
+
+                <!-- Active Sessions -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Active Sessions</h3>
+                    <div class="metric-value" id="activeSessions">0</div>
+                    <div class="metric-label">Last 24 hours</div>
+                </div>
+
+                <!-- Data Sources -->
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Data Sources</h3>
+                    <div class="metric-value" id="dataSources">0</div>
+                    <div class="metric-label">CSV + Documents</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-container">
+                <!-- Query Type Distribution -->
+                <div class="chart-card">
+                    <h2><i class="fas fa-chart-pie"></i> Query Type Distribution</h2>
+                    <canvas id="queryTypeChart"></canvas>
+                </div>
+
+                <!-- Token Usage Breakdown -->
+                <div class="chart-card">
+                    <h2><i class="fas fa-chart-bar"></i> Token Usage Breakdown</h2>
+                    <canvas id="tokenUsageChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Cost Breakdown -->
+            <div class="cost-breakdown">
+                <h2><i class="fas fa-receipt"></i> Top 10 Most Expensive Queries</h2>
+                <div id="costBreakdownList">
+                    <div style="text-align: center; padding: 20px; color: #6b7280;">
+                        No query data available
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Documents -->
+            <div class="upload-card">
+                <h2><i class="fas fa-cloud-upload-alt"></i> Upload Documents & Data</h2>
+                <div class="upload-grid">
+                    <!-- Document Upload -->
+                    <div class="upload-section" onclick="document.getElementById('documentFileInput').click()">
+                        <i class="fas fa-file-pdf"></i>
+                        <h3>Upload Document</h3>
+                        <p>Upload PDF, DOCX, TXT, or HTML files</p>
+                        <input type="file" id="documentFileInput" accept=".pdf,.docx,.doc,.txt,.html" onchange="uploadDocument(event)">
+                        <button class="upload-btn" onclick="event.stopPropagation(); document.getElementById('documentFileInput').click()">
+                            <i class="fas fa-upload"></i> Choose File
+                        </button>
+                    </div>
+
+                    <!-- CSV Upload -->
+                    <div class="upload-section" onclick="document.getElementById('csvFileInput').click()">
+                        <i class="fas fa-file-csv"></i>
+                        <h3>Upload CSV</h3>
+                        <p>Upload CSV files for SQL queries</p>
+                        <input type="file" id="csvFileInput" accept=".csv" onchange="uploadCSV(event)">
+                        <button class="upload-btn" onclick="event.stopPropagation(); document.getElementById('csvFileInput').click()">
+                            <i class="fas fa-upload"></i> Choose File
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload Status -->
+                <div id="uploadStatus" class="upload-status"></div>
+            </div>
+
+            <!-- Data Sources Table -->
+            <div class="data-sources-table">
+                <h2><i class="fas fa-table"></i> Data Sources</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Rows/Chunks</th>
+                            <th>Size (KB)</th>
+                            <th>Columns</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataSourcesTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 20px; color: #6b7280;">
+                                Loading data sources...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDays = 7;
+        let queryTypeChart = null;
+        let tokenUsageChart = null;
+
+        // Set time filter
+        function setTimeFilter(days, button) {
+            currentDays = days;
+            document.querySelectorAll('.time-filter button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+            loadDashboardData();
+        }
+
+        // Format numbers
+        function formatNumber(num) {
+            return new Intl.NumberFormat().format(num);
+        }
+
+        // Format currency
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 6
+            }).format(num);
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Fetch all data in parallel
+                const [dashboardData, sourcesData, costsData] = await Promise.all([
+                    fetch(`/api/dashboard/?days=${currentDays}`).then(r => r.json()),
+                    fetch('/api/analytics/sources/').then(r => r.json()),
+                    fetch(`/api/dashboard/costs/?days=${currentDays}&limit=10`).then(r => r.json())
+                ]);
+
+                // Update metrics
+                document.getElementById('totalTokens').textContent = formatNumber(dashboardData.token_usage.total_tokens);
+                document.getElementById('totalCost').textContent = formatCurrency(dashboardData.token_usage.total_cost_usd);
+                document.getElementById('totalQueries').textContent = formatNumber(dashboardData.total_queries);
+                document.getElementById('successRate').textContent = dashboardData.success_rate.toFixed(1) + '%';
+                document.getElementById('avgResponseTime').textContent = Math.round(dashboardData.avg_response_time_ms) + 'ms';
+                document.getElementById('avgConfidence').textContent = dashboardData.avg_confidence_score.toFixed(2);
+                document.getElementById('activeSessions').textContent = formatNumber(dashboardData.active_sessions_24h);
+                document.getElementById('dataSources').textContent = formatNumber(dashboardData.total_data_sources);
+
+                // Update query type chart
+                updateQueryTypeChart(dashboardData);
+
+                // Update token usage chart
+                updateTokenUsageChart(dashboardData.token_usage);
+
+                // Update data sources table
+                updateDataSourcesTable(sourcesData.sources);
+
+                // Update cost breakdown
+                updateCostBreakdown(costsData.queries);
+
+                // Hide loading, show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div>
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                    </div>
+                    <div style="color: #ef4444;">Error loading dashboard data</div>
+                `;
+            }
+        }
+
+        // Update query type chart
+        function updateQueryTypeChart(data) {
+            const ctx = document.getElementById('queryTypeChart');
+
+            if (queryTypeChart) {
+                queryTypeChart.destroy();
+            }
+
+            queryTypeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['SQL Queries', 'RAG Queries', 'Hybrid Queries'],
+                    datasets: [{
+                        data: [
+                            data.sql_queries_count,
+                            data.rag_queries_count,
+                            data.hybrid_queries_count
+                        ],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f687b3'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update token usage chart
+        function updateTokenUsageChart(tokenData) {
+            const ctx = document.getElementById('tokenUsageChart');
+
+            if (tokenUsageChart) {
+                tokenUsageChart.destroy();
+            }
+
+            tokenUsageChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Prompt Tokens', 'Completion Tokens'],
+                    datasets: [{
+                        label: 'Token Count',
+                        data: [
+                            tokenData.total_prompt_tokens,
+                            tokenData.total_completion_tokens
+                        ],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update data sources table
+        function updateDataSourcesTable(sources) {
+            const tbody = document.getElementById('dataSourcesTableBody');
+
+            if (sources.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 20px; color: #6b7280;">
+                            No data sources available
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = sources.map(source => {
+                let badgeClass = 'badge-pdf';
+                if (source.source_type === 'csv_table') badgeClass = 'badge-csv';
+                else if (source.source_type === 'docx_document') badgeClass = 'badge-docx';
+
+                const rowsOrChunks = source.source_type === 'csv_table' ? source.row_count : source.chunk_count;
+                const columns = source.columns.length > 0 ? source.columns.length : '-';
+
+                return `
+                    <tr>
+                        <td>${source.source_name}</td>
+                        <td><span class="badge ${badgeClass}">${source.source_type.replace('_', ' ').toUpperCase()}</span></td>
+                        <td>${formatNumber(rowsOrChunks)}</td>
+                        <td>${formatNumber(source.file_size_kb)}</td>
+                        <td>${columns}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update cost breakdown
+        function updateCostBreakdown(queries) {
+            const container = document.getElementById('costBreakdownList');
+
+            if (queries.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #6b7280;">
+                        No query data available
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = queries.map(query => `
+                <div class="cost-item">
+                    <div class="cost-query">${query.query_text}</div>
+                    <div class="cost-tokens">${formatNumber(query.total_tokens)} tokens</div>
+                    <div class="cost-amount">${formatCurrency(query.cost_usd)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Refresh dashboard
+        function refreshDashboard() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+            loadDashboardData();
+        }
+
+        // Upload Document Function
+        async function uploadDocument(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.className = 'upload-status loading';
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload/document/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusDiv.className = 'upload-status success';
+                    statusDiv.innerHTML = `
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Success!</strong> ${file.name} uploaded successfully.
+                        ${data.chunks_created} chunks created.
+                    `;
+
+                    // Reset file input
+                    event.target.value = '';
+
+                    // Refresh dashboard after 2 seconds
+                    setTimeout(() => {
+                        refreshDashboard();
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                statusDiv.className = 'upload-status error';
+                statusDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Error!</strong> ${error.message}
+                `;
+            }
+        }
+
+        // Upload CSV Function
+        async function uploadCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.className = 'upload-status loading';
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload/csv/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusDiv.className = 'upload-status success';
+                    statusDiv.innerHTML = `
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Success!</strong> ${file.name} uploaded as table '${data.table_name}'.
+                        ${data.row_count} rows, ${data.column_count} columns.
+                    `;
+
+                    // Reset file input
+                    event.target.value = '';
+
+                    // Refresh dashboard after 2 seconds
+                    setTimeout(() => {
+                        refreshDashboard();
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                statusDiv.className = 'upload-status error';
+                statusDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Error!</strong> ${error.message}
+                `;
+            }
+        }
+
+        // Load data on page load
+        window.addEventListener('load', () => {
+            loadDashboardData();
+        });
+    </script>
+</body>
+</html>

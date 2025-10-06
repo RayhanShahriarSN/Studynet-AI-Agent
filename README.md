@@ -1,18 +1,30 @@
 # RAG AI Agent - Complete Developer Documentation
 
+**Production-ready Django RAG backend with 23 REST API endpoints, optimized dependencies, and comprehensive documentation.**
+
 ## 📋 Table of Contents
 1. [Project Overview](#project-overview)
 2. [Architecture & Workflow](#architecture--workflow)
 3. [File Structure & Purpose](#file-structure--purpose)
-4. [Setup & Installation](#setup--installation)
+4. [Setup & Installation](#setup--installation) ⭐ **Start Here**
 5. [API Endpoints Reference](#api-endpoints-reference)
 6. [Frontend Customization](#frontend-customization)
 7. [Backend Customization](#backend-customization)
 8. [Database & Models](#database--models)
 9. [Configuration Guide](#configuration-guide)
-10. [Troubleshooting](#troubleshooting)
+10. [Troubleshooting](#troubleshooting) 🔧 **Common Issues**
 11. [Advanced Features](#advanced-features)
 12. [Deployment Guide](#deployment-guide)
+13. [Documentation & Resources](#documentation--resources) 📚 **All Guides**
+
+---
+
+## 📄 Complete Documentation Suite
+
+- **[README.md](README.md)** - This file (Getting started & overview)
+- **[ENDPOINTS.md](ENDPOINTS.md)** - All 23 API endpoints with Postman tests
+- **[FRONTEND_INTEGRATION_GUIDE.md](FRONTEND_INTEGRATION_GUIDE.md)** - React/Vue/Angular integration
+- **[DEPENDENCIES_ANALYSIS.md](DEPENDENCIES_ANALYSIS.md)** - Optimization guide
 
 ---
 
@@ -134,28 +146,55 @@ static/
 ### Step 1: Clone and Navigate
 ```bash
 git clone <your-repo-url>
-cd Studynet-AI-Agent/rag_backend
+cd Studynet-AI-Agent
 ```
 
 ### Step 2: Install Dependencies
+
+**Choose your installation profile based on your needs:**
+
+#### Option A: Minimal Installation (~500MB) - Recommended for Production
+Fast, lightweight, all core features included:
+```bash
+pip install -r requirements-minimal.txt
+```
+✅ All RAG functionality | ⚡ Fast | 💾 ~500MB
+
+#### Option B: Standard Installation (~1.5GB)
+Includes advanced reranking:
+```bash
+pip install -r requirements.txt
+# Then uninstall Docling to save space:
+pip uninstall -y docling docling-core easyocr
+```
+✅ All features + Better search ranking | 💾 ~1.5GB
+
+#### Option C: Full Installation (~3-4GB) - Current
+Everything including advanced PDF processing:
 ```bash
 pip install -r requirements.txt
 ```
+✅ All features + Best PDF quality | 🐢 Slower | 💾 ~3-4GB
+
+**What's the difference?**
+- **Minimal**: Uses `pypdf` for basic PDF extraction (fast, lightweight)
+- **Full**: Uses `Docling` for advanced PDF processing (better quality, slower, heavy)
+- See [DEPENDENCIES_ANALYSIS.md](DEPENDENCIES_ANALYSIS.md) for detailed comparison
 
 ### Step 3: Environment Configuration
-Create a `.env` file in the `rag_backend` directory:
+Create a `.env` file in the root directory:
 ```env
-# Azure OpenAI Configuration
+# Azure OpenAI Configuration (Required)
 AZURE_OPENAI_API_KEY=your_azure_openai_key_here
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_VERSION=2025-01-01-preview
 
-# Model Deployments
+# Model Deployments (Required)
 CHAT_MODEL_DEPLOYMENT=chat-heavy
 EMBEDDING_MODEL_DEPLOYMENT=embed-large
 
-# Tavily Web Search
-TAVILY_API_KEY=your_tavily_api_key_here
+# Tavily Web Search (Optional - not currently used)
+# TAVILY_API_KEY=your_tavily_api_key_here
 
 # Optional: Override default paths
 VECTOR_DB_PATH=./vector_store
@@ -170,9 +209,16 @@ python manage.py migrate
 ```
 
 ### Step 5: Load Knowledge Base
+Place your PDF files in the `./pdfs/` folder, then run:
 ```bash
 python load_kb.py
 ```
+
+This will:
+- Scan all PDFs in the `./pdfs/` folder
+- Extract and chunk the content
+- Generate embeddings
+- Store in ChromaDB vector database
 
 ### Step 6: Start Server
 ```bash
@@ -180,168 +226,84 @@ python manage.py runserver 0.0.0.0:8000
 ```
 
 ### Step 7: Access Application
-Open your browser and go to: `http://localhost:8000/api/`
+Open your browser and navigate to:
+- **Main Interface**: `http://localhost:8000/api/`
+- **API Documentation**: See [ENDPOINTS.md](ENDPOINTS.md)
+- **Frontend Integration Guide**: See [FRONTEND_INTEGRATION_GUIDE.md](FRONTEND_INTEGRATION_GUIDE.md)
 
 ---
 
 ## 🔌 API Endpoints Reference
 
+**For complete API documentation with Postman tests, see:** [ENDPOINTS.md](ENDPOINTS.md)
+
 ### Base URL
-All API endpoints are prefixed with: `http://localhost:8000/api/`
-
-### 1. Frontend Interface
-- **URL**: `/`
-- **Method**: GET
-- **Purpose**: Serves the main web interface
-- **Response**: HTML page
-
-### 2. Health Check
-- **URL**: `/health/`
-- **Method**: GET
-- **Purpose**: Check if API is running
-- **Response**:
-```json
-{
-    "status": "healthy",
-    "service": "RAG Pipeline API",
-    "version": "1.0.0"
-}
+```
+http://localhost:8000/api
 ```
 
-### 3. Query Processing
-- **URL**: `/query/`
-- **Method**: POST
-- **Purpose**: Process user questions
-- **Request Body**:
-```json
-{
-    "query": "What is the application process?",
-    "session_id": "optional_session_id",
-    "use_web_search": true,
+### Quick Reference
+
+| Category | Endpoint | Method | Purpose |
+|----------|----------|--------|---------|
+| **Core** | `/health/` | GET | Health check |
+| **Core** | `/query/` | POST | Process user questions |
+| **Upload** | `/upload/document/` | POST | Upload PDF/DOCX |
+| **Upload** | `/upload/text/` | POST | Upload raw text |
+| **Upload** | `/upload/csv/` | POST | Upload CSV files |
+| **Memory** | `/memory/{session_id}/` | GET/DELETE | Session memory |
+| **Memory** | `/sessions/` | GET | List all sessions |
+| **System** | `/metrics/` | GET/POST | System metrics |
+| **KB** | `/knowledge-base/status/` | GET | KB statistics |
+| **KB** | `/knowledge-base/reload/` | POST | Reload KB |
+| **KB** | `/vectorstore/clear/` | DELETE | Clear vector store |
+| **Analytics** | `/analytics/queries/` | GET | Query analytics |
+| **Analytics** | `/analytics/sources/` | GET | Data source stats |
+| **Reports** | `/reports/system/` | GET | System health report |
+| **Reports** | `/reports/usage/` | GET | Usage statistics |
+| **Dashboard** | `/dashboard/` | GET | Main dashboard |
+| **Dashboard** | `/dashboard/tokens/` | GET | Token usage |
+| **Dashboard** | `/dashboard/costs/` | GET | Cost breakdown |
+
+### Example: Query Processing
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/api/query/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What universities are in Sydney?",
+    "session_id": "test_session",
+    "use_web_search": false,
     "enhance_formatting": true
-}
-```
-- **Response**:
-```json
-{
-    "answer": "The application process involves...",
-    "sources": [
-        {
-            "type": "knowledge_base",
-            "content": "Document content..."
-        }
-    ],
-    "confidence_score": 0.85,
-    "web_search_used": false,
-    "session_id": "session_123"
-}
+  }'
 ```
 
-### 4. Document Upload
-- **URL**: `/upload/document/`
-- **Method**: POST
-- **Purpose**: Upload and process PDF documents
-- **Request**: Multipart form data with `file` field
-- **Response**:
+**Response:**
 ```json
 {
-    "status": "success",
-    "message": "Document processed successfully",
-    "chunks_created": 15
-}
-```
-
-### 5. Text Upload
-- **URL**: `/upload/text/`
-- **Method**: POST
-- **Purpose**: Upload raw text content
-- **Request Body**:
-```json
-{
-    "content": "Your text content here",
-    "metadata": {
-        "title": "Document Title",
-        "author": "Author Name"
+  "response": "Based on the documents, universities in Sydney include...",
+  "session_id": "test_session",
+  "query_type": "semantic_rag",
+  "confidence_score": 0.92,
+  "sources": [
+    {
+      "source": "universities.pdf",
+      "score": 0.85
     }
+  ],
+  "processing_time_ms": 1234,
+  "metadata": {
+    "tokens_used": 500,
+    "cost_usd": 0.00025
+  }
 }
 ```
 
-### 6. Memory Management
-- **URL**: `/memory/{session_id}/`
-- **Method**: GET/DELETE
-- **Purpose**: Get or clear conversation memory
-- **GET Response**:
-```json
-{
-    "session_id": "session_123",
-    "context": "Previous conversation...",
-    "memory": {...}
-}
-```
-
-### 7. Sessions List
-- **URL**: `/sessions/`
-- **Method**: GET
-- **Purpose**: List all active sessions
-- **Response**:
-```json
-{
-    "sessions": ["session_1", "session_2"],
-    "count": 2
-}
-```
-
-### 8. System Metrics
-- **URL**: `/metrics/`
-- **Method**: GET/POST
-- **Purpose**: Get or reset system metrics
-- **GET Response**:
-```json
-{
-    "total_queries": 150,
-    "successful_queries": 145,
-    "failed_queries": 5,
-    "average_response_time": 2.3
-}
-```
-
-### 9. Knowledge Base Status
-- **URL**: `/knowledge-base/status/`
-- **Method**: GET
-- **Purpose**: Check knowledge base status
-- **Response**:
-```json
-{
-    "status": "active",
-    "parent_chunks": 25,
-    "child_chunks": 150,
-    "total_documents": 175
-}
-```
-
-### 10. Knowledge Base Reload
-- **URL**: `/knowledge-base/reload/`
-- **Method**: POST
-- **Purpose**: Reload all documents from PDFs folder
-- **Response**:
-```json
-{
-    "status": "success",
-    "message": "Knowledge base reloaded with 62 documents"
-}
-```
-
-### 11. Vector Store Clear
-- **URL**: `/vectorstore/clear/`
-- **Method**: DELETE
-- **Purpose**: Clear all vector store data
-- **Response**:
-```json
-{
-    "status": "success",
-    "message": "Vector store cleared successfully"
-}
-```
+**📚 Full Documentation:**
+- Complete endpoint list: [ENDPOINTS.md](ENDPOINTS.md)
+- Frontend integration: [FRONTEND_INTEGRATION_GUIDE.md](FRONTEND_INTEGRATION_GUIDE.md)
+- Dependencies guide: [DEPENDENCIES_ANALYSIS.md](DEPENDENCIES_ANALYSIS.md)
 
 ---
 
@@ -642,11 +604,22 @@ python load_kb.py
 curl -X POST http://localhost:8000/api/knowledge-base/reload/
 ```
 
-#### 2. "Negative indexing is not supported"
-**Problem**: Error when processing queries
-**Solution**: This has been fixed in the code. If you see this error, restart the server.
+#### 2. "Negative index error after few queries"
+**Problem**: IndexError with negative indices
+**Solution**: ✅ **FIXED** in latest version. Update to latest code or restart server.
+```bash
+git pull origin main
+python manage.py runserver
+```
 
-#### 3. "TemplateDoesNotExist"
+#### 3. "System Status stuck on 'Checking...'"
+**Problem**: Frontend status not loading
+**Solution**: ✅ **FIXED** - Clear browser cache (`Ctrl+Shift+R`) and refresh
+```bash
+python manage.py collectstatic --noinput
+```
+
+#### 4. "TemplateDoesNotExist"
 **Problem**: Frontend not loading
 **Solution**: Ensure the template is in the correct location:
 ```bash
@@ -654,7 +627,7 @@ curl -X POST http://localhost:8000/api/knowledge-base/reload/
 ls api/templates/index.html
 ```
 
-#### 4. "Failed to add documents to vector store"
+#### 5. "Failed to add documents to vector store"
 **Problem**: Document upload failing
 **Solution**:
 ```bash
@@ -663,12 +636,27 @@ curl -X DELETE http://localhost:8000/api/vectorstore/clear/
 python load_kb.py
 ```
 
-#### 5. "Azure OpenAI API Error"
+#### 6. "Azure OpenAI API Error"
 **Problem**: AI responses not working
 **Solution**: Check your `.env` file:
 ```env
 AZURE_OPENAI_API_KEY=your_correct_key
 AZURE_OPENAI_ENDPOINT=https://your-correct-resource.openai.azure.com/
+```
+
+#### 7. "PDF processing very slow"
+**Problem**: Document upload takes too long
+**Solution**: You're using Docling (heavy). Switch to lightweight:
+```bash
+pip uninstall -y docling docling-core easyocr
+# System will automatically use pypdf (faster)
+```
+
+#### 8. "Installation taking too long / too much disk space"
+**Problem**: `pip install` downloading 3-4GB
+**Solution**: Use minimal installation:
+```bash
+pip install -r requirements-minimal.txt  # Only 500MB
 ```
 
 ### Debug Mode
@@ -843,61 +831,101 @@ services:
 
 ---
 
-## 📚 Additional Resources
+## 📚 Documentation & Resources
 
-### Useful Commands
+### 📖 Complete Documentation
+
+This project includes comprehensive documentation:
+
+1. **[README.md](README.md)** (This file) - Getting started, overview, quick reference
+2. **[ENDPOINTS.md](ENDPOINTS.md)** - Complete API reference with 23 endpoints + Postman tests
+3. **[FRONTEND_INTEGRATION_GUIDE.md](FRONTEND_INTEGRATION_GUIDE.md)** - Frontend developer guide
+   - React, Vue, Angular, TypeScript examples
+   - Authentication & CORS setup
+   - Error handling & best practices
+   - Complete working examples
+4. **[DEPENDENCIES_ANALYSIS.md](DEPENDENCIES_ANALYSIS.md)** - Dependency optimization guide
+   - Detailed package analysis
+   - Installation profiles (Minimal/Standard/Full)
+   - Size comparison & recommendations
+
+### 🛠️ Useful Commands
 ```bash
-# Start development server
-python manage.py runserver
+# Development
+python manage.py runserver              # Start development server
+python load_kb.py                       # Load knowledge base
+python debug_kb.py                      # Debug knowledge base
+python test_docling.py                  # Test Docling vs pypdf
 
-# Load knowledge base
-python load_kb.py
+# Database
+python manage.py makemigrations         # Create migrations
+python manage.py migrate                # Apply migrations
+python manage.py createsuperuser        # Create admin user
 
-# Debug knowledge base
-python debug_kb.py
+# Deployment
+python manage.py collectstatic          # Collect static files
+gunicorn config.wsgi:application        # Run with Gunicorn
 
-# Create migrations
-python manage.py makemigrations
-
-# Apply migrations
-python manage.py migrate
-
-# Create superuser
-python manage.py createsuperuser
-
-# Collect static files
-python manage.py collectstatic
+# Dependencies
+pip install -r requirements-minimal.txt # Minimal installation (~500MB)
+pip install -r requirements.txt         # Full installation (~3-4GB)
+pip list | grep -E "docling|sentence"   # Check installed packages
 ```
 
-### File Locations Summary
-- **Main Settings**: `rag_backend/settings.py`
-- **URL Routing**: `rag_backend/urls.py` and `api/urls.py`
-- **API Logic**: `api/views.py`
-- **Database Models**: `api/models.py`
-- **AI Agent**: `api/agent.py`
-- **Frontend**: `api/templates/index.html`
-- **Static Files**: `static/` directory
-- **Configuration**: `api/config.py`
-- **Environment**: `.env` file
+### 📂 File Locations Summary
+| Component | Location |
+|-----------|----------|
+| **Settings** | `config/settings.py` |
+| **URL Routing** | `config/urls.py` + `api/urls.py` |
+| **API Views** | `api/views.py` (1200+ lines) |
+| **Models** | `api/models.py` |
+| **AI Agent** | `api/agent.py` |
+| **Retriever** | `api/retriever.py` |
+| **Vector Store** | `api/vectorstore.py` |
+| **Memory** | `api/memory.py` |
+| **Frontend** | `api/templates/index.html` |
+| **Static Files** | `static/css/`, `static/js/` |
+| **Configuration** | `api/config.py` + `.env` |
+| **Dependencies** | `requirements.txt`, `requirements-minimal.txt` |
 
-### Support and Community
+### 🌐 External Resources
 - **Django Documentation**: https://docs.djangoproject.com/
 - **Django REST Framework**: https://www.django-rest-framework.org/
 - **LangChain Documentation**: https://python.langchain.com/
 - **Azure OpenAI**: https://docs.microsoft.com/en-us/azure/cognitive-services/openai/
+- **ChromaDB**: https://docs.trychroma.com/
 
 ---
 
 ## 🎉 Conclusion
 
-This RAG AI Agent is a powerful, customizable system that can be adapted for various use cases. The modular architecture makes it easy to:
+This RAG AI Agent is a **production-ready**, **fully-documented** system with:
 
-- Add new document types
-- Integrate different AI models
-- Customize the frontend
-- Extend functionality
-- Deploy to production
+✅ **23 REST API Endpoints** - Complete backend functionality
+✅ **Comprehensive Documentation** - 4 detailed guides covering everything
+✅ **Flexible Installation** - Choose from Minimal (500MB) to Full (3-4GB)
+✅ **Frontend Ready** - Integration guides for React, Vue, Angular, TypeScript
+✅ **Optimized Dependencies** - Automatic fallbacks, no unnecessary packages
+✅ **Production Tested** - Error handling, session management, analytics
 
-Whether you're a beginner or an experienced developer, this documentation provides everything you need to understand, customize, and deploy the system successfully.
+### 🚀 Quick Start Checklist
 
-**Happy coding!** 🚀
+- [ ] Install dependencies: `pip install -r requirements-minimal.txt`
+- [ ] Create `.env` file with Azure OpenAI credentials
+- [ ] Run migrations: `python manage.py migrate`
+- [ ] Load PDFs: Put files in `./pdfs/` and run `python load_kb.py`
+- [ ] Start server: `python manage.py runserver`
+- [ ] Test API: Visit `http://localhost:8000/api/health/`
+- [ ] Read docs: Check [ENDPOINTS.md](ENDPOINTS.md) for API reference
+
+### 📖 Next Steps
+
+- **Backend Developers**: See [ENDPOINTS.md](ENDPOINTS.md)
+- **Frontend Developers**: See [FRONTEND_INTEGRATION_GUIDE.md](FRONTEND_INTEGRATION_GUIDE.md)
+- **DevOps/Deployment**: See [DEPENDENCIES_ANALYSIS.md](DEPENDENCIES_ANALYSIS.md)
+
+---
+
+**Built with ❤️ using Django, LangChain, and Azure OpenAI**
+
+Happy coding! 🚀

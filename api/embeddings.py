@@ -36,12 +36,15 @@ class EmbeddingService:
         similarities = np.dot(doc_vecs, query_vec) / (
             np.linalg.norm(doc_vecs, axis=1) * np.linalg.norm(query_vec)
         )
-        
+
         # Get top k indices
         # Ensure k doesn't exceed the number of documents
         k = min(k, len(similarities))
+        if k == 0 or len(similarities) == 0:
+            return []
+
         top_k_indices = np.argsort(similarities)[-k:][::-1]
-        
+
         return [(idx, similarities[idx]) for idx in top_k_indices]
 
 # Singleton instance

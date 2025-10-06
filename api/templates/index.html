@@ -29,8 +29,8 @@
             <button id="clearChat" class="btn btn-secondary">
               <i class="fas fa-trash"></i> Clear Chat
             </button>
-            <button id="uploadDoc" class="btn btn-primary">
-              <i class="fas fa-upload"></i> Upload Document
+            <button id="dashboardBtn" class="btn btn-dashboard" onclick="window.location.href='/api/developer/'">
+              <i class="fas fa-chart-line"></i> Developer Dashboard
             </button>
           </div>
         </div>
@@ -144,44 +144,6 @@
           </div>
         </aside>
       </main>
-    </div>
-
-    <!-- Upload Modal -->
-    <div id="uploadModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Upload Document</h3>
-          <button class="close-btn" id="closeModal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="upload-area" id="uploadArea">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <p>Drag and drop your document here or click to browse</p>
-            <input
-              type="file"
-              id="fileInput"
-              accept=".pdf,.txt,.docx,.csv,.json"
-              hidden
-            />
-            <button
-              class="btn btn-primary"
-              onclick="document.getElementById('fileInput').click()"
-            >
-              Choose File
-            </button>
-          </div>
-          <div
-            class="upload-progress"
-            id="uploadProgress"
-            style="display: none"
-          >
-            <div class="progress-bar">
-              <div class="progress-fill"></div>
-            </div>
-            <p>Uploading and processing document...</p>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Loading Overlay -->

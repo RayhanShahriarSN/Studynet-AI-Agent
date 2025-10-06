@@ -78,22 +78,22 @@ class ConversationMemoryManager:
         session.total_tokens = self._count_tokens(session_id)
         session.save()
         
-    def get_conversation_context(self, session_id: str, 
+    def get_conversation_context(self, session_id: str,
                                  max_messages: Optional[int] = None) -> str:
         """Get formatted conversation context"""
         try:
             session = ConversationSession.objects.get(session_id=session_id)
             messages = session.messages.all()
-            
-            if max_messages and len(messages) > max_messages:
+
+            if max_messages and max_messages > 0 and len(messages) > max_messages:
                 messages = messages[-max_messages:]
-            
+
             # Format messages for context
             context_parts = []
             for msg in messages:
                 role_label = "User" if msg.role == "user" else "Assistant"
                 context_parts.append(f"{role_label}: {msg.content}")
-            
+
             return "\n".join(context_parts)
         except ConversationSession.DoesNotExist:
             return ""

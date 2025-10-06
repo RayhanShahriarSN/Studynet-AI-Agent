@@ -47,6 +47,7 @@ from .vectorstore import vector_store
 from .sql_engine import sql_engine
 from .retriever import hybrid_retriever
 from .token_tracker import token_tracker
+from .query_logger import query_logger
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,11 @@ def index_view(request):
     return render(request, 'index.html')
 
 
+def developer_dashboard_view(request):
+    """Serve the developer dashboard page"""
+    return render(request, 'developer_dashboard.html')
+
+
 class HealthCheckView(APIView):
     """Health check endpoint"""
     permission_classes = [AllowAny]
@@ -150,24 +156,90 @@ class QueryProcessView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         start_time = time.time()
+        query_text = serializer.validated_data['query']
+        session_id = serializer.validated_data.get('session_id')
 
         try:
             # Process query through Master Orchestrator (supports SQL + RAG + Hybrid)
             result = master_orchestrator.process_query(
-                query=serializer.validated_data['query'],
-                session_id=serializer.validated_data.get('session_id'),
+                query=query_text,
+                session_id=session_id,
                 use_classification=True,  # Enable query classification
                 use_enhancement=True  # Enable query enhancement
             )
 
             # Calculate response time
-            response_time = time.time() - start_time
+            response_time_ms = int((time.time() - start_time) * 1000)
 
             # Record metrics in background
             metrics_collector.record_query(
-                response_time,
+                response_time_ms / 1000,
                 len(result.get("sources", [])) > 0,
                 result.get("web_search_used", False)
+            )
+
+            # Determine query type
+            classification = result.get("classification", {})
+            sql_used = result.get("sql_used", False)
+            rag_used = result.get("rag_used", False)
+
+            if sql_used and rag_used:
+                query_type = QueryAnalytics.QueryTypeChoices.HYBRID
+            elif sql_used:
+                query_type = QueryAnalytics.QueryTypeChoices.STRUCTURED_SQL
+            elif rag_used:
+                query_type = QueryAnalytics.QueryTypeChoices.SEMANTIC_RAG
+            else:
+                query_type = QueryAnalytics.QueryTypeChoices.UNKNOWN
+
+            # Extract token usage from result (if available in metadata)
+            # For now, we'll estimate based on query/response length
+            # In production, you should extract this from LLM response metadata
+            prompt_tokens = len(query_text.split()) * 2  # Rough estimate
+            completion_tokens = len(result.get("answer", "").split()) * 2  # Rough estimate
+            total_tokens = prompt_tokens + completion_tokens
+
+            # Calculate cost
+            cost_usd = token_tracker.calculate_cost(
+                prompt_tokens,
+                completion_tokens,
+                model='gpt-4-turbo'
+            )
+
+            # Create QueryAnalytics record
+            QueryAnalytics.objects.create(
+                session_id=result["session_id"],
+                query_text=query_text,
+                query_type=query_type,
+                classification_method=classification.get('method', 'keyword') if classification else 'keyword',
+                response_time_ms=response_time_ms,
+                tokens_used=total_tokens,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_cost_usd=cost_usd,
+                tools_used=result.get("tools_used", []),
+                sql_used=sql_used,
+                rag_used=rag_used,
+                web_search_used=result.get("web_search_used", False),
+                sources_count=len(result.get("sources", [])),
+                confidence_score=result.get("confidence_score", 0.5),
+                success=True,
+                error_message=None
+            )
+
+            # Log to JSON file
+            query_logger.log_query(
+                query_text=query_text,
+                query_type=query_type,
+                tokens_used=total_tokens,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost_usd=cost_usd,
+                response_time_ms=response_time_ms,
+                success=True,
+                sql_used=sql_used,
+                rag_used=rag_used,
+                confidence_score=result.get("confidence_score", 0.5)
             )
 
             # Format response
@@ -176,7 +248,10 @@ class QueryProcessView(APIView):
                 "sources": result.get("sources", []),
                 "confidence_score": result.get("confidence_score", 0.5),
                 "web_search_used": result.get("web_search_used", False),
-                "session_id": result["session_id"]
+                "session_id": result["session_id"],
+                "query_type": query_type,
+                "tokens_used": total_tokens,
+                "cost_usd": str(cost_usd)
             }
 
             return Response(response_data)
@@ -184,6 +259,33 @@ class QueryProcessView(APIView):
         except Exception as e:
             logger.error(f"Error processing query: {e}")
             metrics_collector.record_error()
+
+            # Record failed query analytics
+            response_time_ms = int((time.time() - start_time) * 1000)
+            QueryAnalytics.objects.create(
+                session_id=session_id or 'unknown',
+                query_text=query_text,
+                query_type=QueryAnalytics.QueryTypeChoices.UNKNOWN,
+                response_time_ms=response_time_ms,
+                success=False,
+                error_message=str(e)
+            )
+
+            # Log failed query to JSON file
+            query_logger.log_query(
+                query_text=query_text,
+                query_type='unknown',
+                tokens_used=0,
+                prompt_tokens=0,
+                completion_tokens=0,
+                cost_usd=Decimal('0.0'),
+                response_time_ms=response_time_ms,
+                success=False,
+                sql_used=False,
+                rag_used=False,
+                confidence_score=0.0
+            )
+
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

@@ -665,6 +665,7 @@ class RAGAgent {
         this.elements.sessionCount.textContent = sessionsData.count;
       }
     } catch (error) {
+      console.error("Error loading system status:", error);
       this.elements.apiStatus.textContent = "Offline";
       this.elements.apiStatus.className = "status-value offline";
       this.elements.kbStatus.textContent = "Unknown";
@@ -749,11 +750,14 @@ class RAGAgent {
 
   async makeRequest(endpoint, options = {}) {
     const url = this.apiBase + endpoint;
-    const defaultOptions = {
-      headers: {
+
+    // Don't set Content-Type for FormData (browser will set it with boundary)
+    const defaultOptions = {};
+    if (!(options.body instanceof FormData)) {
+      defaultOptions.headers = {
         "Content-Type": "application/json",
-      },
-    };
+      };
+    }
 
     // Update debug info
     this.lastRequestTime = new Date().toLocaleTimeString();

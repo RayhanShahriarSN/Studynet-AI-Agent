@@ -218,11 +218,15 @@ class HybridRetriever:
 
         # Get top k indices
         k = min(k, len(scores))
+        if k == 0 or len(scores) == 0:
+            return []
+
         top_indices = np.argsort(scores)[-k:][::-1]
 
-        # Return documents with scores
+        # Return documents with scores - validate indices
         results = [(self.bm25_documents[idx], float(scores[idx]))
-                   for idx in top_indices if scores[idx] > 0]
+                   for idx in top_indices
+                   if 0 <= idx < len(self.bm25_documents) and scores[idx] > 0]
 
         return results
 
