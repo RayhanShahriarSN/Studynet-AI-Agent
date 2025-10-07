@@ -416,7 +416,7 @@ Warm, encouraging opening sentence that acknowledges the student's situation.
 - Point 2 with actionable advice
 - Point 3 with helpful context
 
-### 💰 Budget-Friendly Options (if relevant)
+### 💰 Budget-Friendly Options (Only if the user asks for it)
 - Affordable course option 1 - $XX,XXX/year
 - Affordable course option 2 - $XX,XXX/year
 - Scholarship opportunities

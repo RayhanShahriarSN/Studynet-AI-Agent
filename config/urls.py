@@ -18,12 +18,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from account.views import *
 
 urlpatterns = [
+    path('', signup_page, name="signup_page"),
+    path('account/', include('account.urls')),
+    path("login/", login_page, name="login_page"),
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
-]
+]+ static(settings.PDFS_URL, document_root=settings.PDFS_ROOT)
 
-# Serve media files in development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

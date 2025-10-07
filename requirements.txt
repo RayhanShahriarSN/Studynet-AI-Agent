@@ -30,7 +30,7 @@ python-docx==1.1.2
 # Data Processing
 pandas==2.2.3
 pandasql==0.7.3
-numpy==2.1.3
+numpy
 
 # Retrieval
 rank-bm25==0.2.2
@@ -51,8 +51,8 @@ whitenoise==6.8.2
 # Currently INSTALLED but optional - provides better PDF/DOCX quality
 # To remove: pip uninstall docling docling-core easyocr
 # System will automatically fallback to pypdf + python-docx
-docling==2.9.2
-docling-core==2.6.3
+docling
+docling-core
 easyocr==1.7.2
 
 # Reranking with Cross-Encoder - ~500MB
@@ -62,7 +62,9 @@ sentence-transformers==3.3.1
 # Web Search Integration - NOT USED (commented out in code)
 # TavilySearch is imported but not actively used in agent.py
 # Uncomment if you want to enable web search:
-# tavily-python==0.3.3
+tavily-python==0.3.3
+djangorestframework-simplejwt==5.3.1
+
 
 # ============================================================================
 # NOT NEEDED (Removed)
@@ -73,3 +75,5 @@ sentence-transformers==3.3.1
 # pytest==8.3.4
 # pytest-django==4.9.0
 # pytest-asyncio==0.24.0
+
+

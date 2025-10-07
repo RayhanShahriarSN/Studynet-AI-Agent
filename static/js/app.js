@@ -643,7 +643,7 @@ class RAGAgent {
     try {
       // Check API status
       const apiResponse = await this.makeRequest("/health/");
-      if (apiResponse.ok) {
+      if (apiResponse.ok && this.elements.apiStatus) {
         this.elements.apiStatus.textContent = "Online";
         this.elements.apiStatus.className = "status-value online";
       } else {

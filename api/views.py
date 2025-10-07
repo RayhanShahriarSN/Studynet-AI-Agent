@@ -112,7 +112,8 @@ class QueryCostBreakdownSerializer(serializers.Serializer):
 # ============================================================================
 # Frontend & Core Views
 # ============================================================================
-
+from django.contrib.auth.decorators import login_required
+@login_required
 def index_view(request):
     """Serve the main frontend page"""
     return render(request, 'index.html')
@@ -121,6 +122,7 @@ def index_view(request):
 def developer_dashboard_view(request):
     """Serve the developer dashboard page"""
     return render(request, 'developer_dashboard.html')
+
 
 
 class HealthCheckView(APIView):

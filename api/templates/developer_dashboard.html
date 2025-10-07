@@ -16,7 +16,14 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(
+        90deg,
+        #000000 0%,
+        #000924 20%,
+        #380052 50%,
+        #672162 80%,
+        #9B2063 100%
+    );
             min-height: 100vh;
             padding: 20px;
             color: #333;
@@ -40,7 +47,7 @@
 
         .header h1 {
             font-size: 28px;
-            color: #667eea;
+            color: #000924;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -64,18 +71,18 @@
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #000924;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5568d3;
+            background: #000924;
             transform: translateY(-2px);
         }
 
         .btn-secondary {
             background: #e0e7ff;
-            color: #667eea;
+            color: #000924;
         }
 
         .btn-secondary:hover {
@@ -412,8 +419,13 @@
             display: none;
         }
     </style>
+
+    
 </head>
 <body>
+
+
+    
     <div class="dashboard-container">
         <!-- Header -->
         <div class="header">
@@ -765,39 +777,44 @@
         }
 
         // Update data sources table
-        function updateDataSourcesTable(sources) {
-            const tbody = document.getElementById('dataSourcesTableBody');
+        // Update data sources table
+function updateDataSourcesTable(sources) {
+    const tbody = document.getElementById('dataSourcesTableBody');
 
-            if (sources.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 20px; color: #6b7280;">
-                            No data sources available
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
+    if (sources.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 20px; color: #6b7280;">
+                    No data sources available
+                </td>
+            </tr>
+        `;
+        return;
+    }
 
-            tbody.innerHTML = sources.map(source => {
-                let badgeClass = 'badge-pdf';
-                if (source.source_type === 'csv_table') badgeClass = 'badge-csv';
-                else if (source.source_type === 'docx_document') badgeClass = 'badge-docx';
+    tbody.innerHTML = sources.map(source => {
+        let badgeClass = 'badge-pdf';
+        if (source.source_type === 'csv_table') badgeClass = 'badge-csv';
+        else if (source.source_type === 'docx_document') badgeClass = 'badge-docx';
 
-                const rowsOrChunks = source.source_type === 'csv_table' ? source.row_count : source.chunk_count;
-                const columns = source.columns.length > 0 ? source.columns.length : '-';
+        const rowsOrChunks = source.source_type === 'csv_table' ? source.row_count : source.chunk_count;
+        const columns = source.columns.length > 0 ? source.columns.length : '-';
 
-                return `
-                    <tr>
-                        <td>${source.source_name}</td>
-                        <td><span class="badge ${badgeClass}">${source.source_type.replace('_', ' ').toUpperCase()}</span></td>
-                        <td>${formatNumber(rowsOrChunks)}</td>
-                        <td>${formatNumber(source.file_size_kb)}</td>
-                        <td>${columns}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
+        // ✅ Build the file URL (adjust this path if needed)
+        const fileUrl = source.file_url || `/pdfs/${source.source_name}`;
+
+        // ✅ Make the row clickable — open in new tab
+        return `
+            <tr style="cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')">
+                <td>${source.source_name}</td>
+                <td><span class="badge ${badgeClass}">${source.source_type.replace('_', ' ').toUpperCase()}</span></td>
+                <td>${formatNumber(rowsOrChunks)}</td>
+                <td>${formatNumber(source.file_size_kb)}</td>
+                <td>${columns}</td>
+            </tr>
+        `;
+    }).join('');
+}
 
         // Update cost breakdown
         function updateCostBreakdown(queries) {
