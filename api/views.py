@@ -22,6 +22,10 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
+from account.authentication import BearerTokenAuthentication
+from rest_framework.permissions import IsAuthenticated as isAuthenticated
+from rest_framework.permissions import IsAdminUser as isAdminUser
+
 from .models import (
     QueryRequest, QueryResponse, DocumentUpload, SystemMetrics,
     KnowledgeBaseStatus, ConversationSession, ChatMessage,
@@ -48,8 +52,12 @@ from .sql_engine import sql_engine
 from .retriever import hybrid_retriever
 from .token_tracker import token_tracker
 from .query_logger import query_logger
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+
 
 logger = logging.getLogger(__name__)
+
 
 
 # ============================================================================
@@ -113,21 +121,30 @@ class QueryCostBreakdownSerializer(serializers.Serializer):
 # Frontend & Core Views
 # ============================================================================
 from django.contrib.auth.decorators import login_required
-@login_required
+@never_cache
 def index_view(request):
     """Serve the main frontend page"""
-    return render(request, 'index.html')
+    token = request.session.get("token", "")
+    return render(request, "index.html", {"token": token})
 
+@never_cache
+def user_view(request):
+    """Serve the main frontend page"""
+    token = request.session.get("token", "")
+    return render(request, "User_page.html", {"token": token})
 
+@never_cache
 def developer_dashboard_view(request):
     """Serve the developer dashboard page"""
     return render(request, 'developer_dashboard.html')
 
 
 
+
 class HealthCheckView(APIView):
     """Health check endpoint"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         return Response({
@@ -149,7 +166,8 @@ class HealthCheckView(APIView):
 
 class QueryProcessView(APIView):
     """Process a user query through the RAG pipeline"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
     parser_classes = [JSONParser]
 
     def post(self, request):
@@ -300,7 +318,8 @@ class QueryProcessView(APIView):
 
 class DocumentUploadView(APIView):
     """Upload and process a document"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -380,7 +399,8 @@ class DocumentUploadView(APIView):
 
 class TextUploadView(APIView):
     """Upload raw text content"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
     parser_classes = [JSONParser]
 
     def post(self, request):
@@ -419,7 +439,8 @@ class TextUploadView(APIView):
 
 class CSVUploadView(APIView):
     """Upload CSV files and make them queryable via SQL"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -519,7 +540,8 @@ class CSVUploadView(APIView):
 
 class MemoryView(APIView):
     """Get conversation memory for a session"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request, session_id):
         try:
@@ -556,7 +578,8 @@ class MemoryView(APIView):
 
 class SessionsListView(APIView):
     """List all active sessions"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         try:
@@ -579,7 +602,8 @@ class SessionsListView(APIView):
 
 class MetricsView(APIView):
     """Get system metrics"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         try:
@@ -610,7 +634,8 @@ class MetricsView(APIView):
 
 class KnowledgeBaseStatusView(APIView):
     """Get knowledge base status and statistics"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         try:
@@ -636,7 +661,8 @@ class KnowledgeBaseStatusView(APIView):
 
 class KnowledgeBaseReloadView(APIView):
     """Reload knowledge base from PDFs folder"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def post(self, request):
         try:
@@ -672,7 +698,8 @@ class KnowledgeBaseReloadView(APIView):
 
 class VectorStoreClearView(APIView):
     """Clear the entire vector store (use with caution)"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def delete(self, request):
         try:
@@ -695,7 +722,8 @@ class VectorStoreClearView(APIView):
 
 class AnalyticsQueryStatsView(APIView):
     """Get query analytics and statistics"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         try:
@@ -746,7 +774,8 @@ class AnalyticsQueryStatsView(APIView):
 
 class AnalyticsSourceStatsView(APIView):
     """Get data source statistics"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         try:
@@ -783,7 +812,8 @@ class AnalyticsSourceStatsView(APIView):
 
 class SystemReportView(APIView):
     """Generate system health report"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         try:
@@ -848,7 +878,8 @@ class SystemReportView(APIView):
 
 class UsageReportView(APIView):
     """Generate usage report"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         try:
@@ -916,7 +947,8 @@ class UsageReportView(APIView):
 
 class SQLExportView(APIView):
     """Export SQL query results to CSV or JSON"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAuthenticated]
     parser_classes = [JSONParser]
 
     def post(self, request):
@@ -974,10 +1006,12 @@ class SQLExportView(APIView):
 # ============================================================================
 # Developer Dashboard - Token Tracking
 # ============================================================================
+from rest_framework.permissions import IsAdminUser as isAdminUser
 
 class TokenUsageView(APIView):
     """Get detailed token usage and cost statistics"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         """Get token usage statistics
@@ -1040,7 +1074,8 @@ class TokenUsageView(APIView):
 
 class DeveloperDashboardView(APIView):
     """Comprehensive developer dashboard with all metrics"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         """Get comprehensive dashboard data
@@ -1139,7 +1174,8 @@ class DeveloperDashboardView(APIView):
 
 class QueryCostBreakdownView(APIView):
     """Get cost breakdown for individual queries"""
-    permission_classes = [AllowAny]
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         """Get detailed cost breakdown per query
