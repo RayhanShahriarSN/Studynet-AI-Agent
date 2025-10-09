@@ -624,327 +624,284 @@
         </div>
     </div>
 
-    <script>
-        let currentDays = 7;
-        let queryTypeChart = null;
-        let tokenUsageChart = null;
+<script>
+    const token = "{{ token }}"; // Token from Django template
+    console.log("Token loaded:", token);
 
-        // Set time filter
-        function setTimeFilter(days, button) {
-            currentDays = days;
-            document.querySelectorAll('.time-filter button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            button.classList.add('active');
-            loadDashboardData();
+    let currentDays = 7;
+    let queryTypeChart = null;
+    let tokenUsageChart = null;
+
+    // ---------------------------
+    // Helper function for fetch with token
+    // ---------------------------
+    async function fetchWithToken(url, options = {}) {
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            ...options.headers
+        };
+
+        const response = await fetch(url, { ...options, headers });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Request failed with status ${response.status}`);
         }
 
-        // Format numbers
-        function formatNumber(num) {
-            return new Intl.NumberFormat().format(num);
-        }
-
-        // Format currency
-        function formatCurrency(num) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 6
-            }).format(num);
-        }
-
-        // Load dashboard data
-        async function loadDashboardData() {
-            try {
-                // Fetch all data in parallel
-                const [dashboardData, sourcesData, costsData] = await Promise.all([
-                    fetch(`/api/dashboard/?days=${currentDays}`).then(r => r.json()),
-                    fetch('/api/analytics/sources/').then(r => r.json()),
-                    fetch(`/api/dashboard/costs/?days=${currentDays}&limit=10`).then(r => r.json())
-                ]);
-
-                // Update metrics
-                document.getElementById('totalTokens').textContent = formatNumber(dashboardData.token_usage.total_tokens);
-                document.getElementById('totalCost').textContent = formatCurrency(dashboardData.token_usage.total_cost_usd);
-                document.getElementById('totalQueries').textContent = formatNumber(dashboardData.total_queries);
-                document.getElementById('successRate').textContent = dashboardData.success_rate.toFixed(1) + '%';
-                document.getElementById('avgResponseTime').textContent = Math.round(dashboardData.avg_response_time_ms) + 'ms';
-                document.getElementById('avgConfidence').textContent = dashboardData.avg_confidence_score.toFixed(2);
-                document.getElementById('activeSessions').textContent = formatNumber(dashboardData.active_sessions_24h);
-                document.getElementById('dataSources').textContent = formatNumber(dashboardData.total_data_sources);
-
-                // Update query type chart
-                updateQueryTypeChart(dashboardData);
-
-                // Update token usage chart
-                updateTokenUsageChart(dashboardData.token_usage);
-
-                // Update data sources table
-                updateDataSourcesTable(sourcesData.sources);
-
-                // Update cost breakdown
-                updateCostBreakdown(costsData.queries);
-
-                // Hide loading, show content
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('dashboardContent').style.display = 'block';
-
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                document.getElementById('loading').innerHTML = `
-                    <div>
-                        <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
-                    </div>
-                    <div style="color: #ef4444;">Error loading dashboard data</div>
-                `;
-            }
-        }
-
-        // Update query type chart
-        function updateQueryTypeChart(data) {
-            const ctx = document.getElementById('queryTypeChart');
-
-            if (queryTypeChart) {
-                queryTypeChart.destroy();
-            }
-
-            queryTypeChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['SQL Queries', 'RAG Queries', 'Hybrid Queries'],
-                    datasets: [{
-                        data: [
-                            data.sql_queries_count,
-                            data.rag_queries_count,
-                            data.hybrid_queries_count
-                        ],
-                        backgroundColor: [
-                            '#667eea',
-                            '#764ba2',
-                            '#f687b3'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-
-        // Update token usage chart
-        function updateTokenUsageChart(tokenData) {
-            const ctx = document.getElementById('tokenUsageChart');
-
-            if (tokenUsageChart) {
-                tokenUsageChart.destroy();
-            }
-
-            tokenUsageChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Prompt Tokens', 'Completion Tokens'],
-                    datasets: [{
-                        label: 'Token Count',
-                        data: [
-                            tokenData.total_prompt_tokens,
-                            tokenData.total_completion_tokens
-                        ],
-                        backgroundColor: [
-                            '#667eea',
-                            '#764ba2'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-
-        // Update data sources table
-        // Update data sources table
-function updateDataSourcesTable(sources) {
-    const tbody = document.getElementById('dataSourcesTableBody');
-
-    if (sources.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" style="text-align: center; padding: 20px; color: #6b7280;">
-                    No data sources available
-                </td>
-            </tr>
-        `;
-        return;
+        return response.json();
     }
 
-    tbody.innerHTML = sources.map(source => {
-        let badgeClass = 'badge-pdf';
-        if (source.source_type === 'csv_table') badgeClass = 'badge-csv';
-        else if (source.source_type === 'docx_document') badgeClass = 'badge-docx';
+    // ---------------------------
+    // Set time filter
+    // ---------------------------
+    function setTimeFilter(days, button) {
+        currentDays = days;
+        document.querySelectorAll('.time-filter button').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        loadDashboardData();
+    }
 
-        const rowsOrChunks = source.source_type === 'csv_table' ? source.row_count : source.chunk_count;
-        const columns = source.columns.length > 0 ? source.columns.length : '-';
+    // ---------------------------
+    // Number and currency formatting
+    // ---------------------------
+    function formatNumber(num) {
+        return new Intl.NumberFormat().format(num);
+    }
 
-        // ✅ Build the file URL (adjust this path if needed)
-        const fileUrl = source.file_url || `/pdfs/${source.source_name}`;
+    function formatCurrency(num) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 6
+        }).format(num);
+    }
 
-        // ✅ Make the row clickable — open in new tab
-        return `
-            <tr style="cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')">
-                <td>${source.source_name}</td>
-                <td><span class="badge ${badgeClass}">${source.source_type.replace('_', ' ').toUpperCase()}</span></td>
-                <td>${formatNumber(rowsOrChunks)}</td>
-                <td>${formatNumber(source.file_size_kb)}</td>
-                <td>${columns}</td>
-            </tr>
-        `;
-    }).join('');
-}
+    // ---------------------------
+    // Load dashboard data
+    // ---------------------------
+    async function loadDashboardData() {
+        try {
+            const [dashboardData, sourcesData, costsData] = await Promise.all([
+                fetchWithToken(`/api/dashboard/?days=${currentDays}`),
+                fetchWithToken('/api/analytics/sources/'),
+                fetchWithToken(`/api/dashboard/costs/?days=${currentDays}&limit=10`)
+            ]);
 
-        // Update cost breakdown
-        function updateCostBreakdown(queries) {
-            const container = document.getElementById('costBreakdownList');
+            // Update metrics
+            document.getElementById('totalTokens').textContent = formatNumber(dashboardData.token_usage.total_tokens);
+            document.getElementById('totalCost').textContent = formatCurrency(dashboardData.token_usage.total_cost_usd);
+            document.getElementById('totalQueries').textContent = formatNumber(dashboardData.total_queries);
+            document.getElementById('successRate').textContent = dashboardData.success_rate.toFixed(1) + '%';
+            document.getElementById('avgResponseTime').textContent = Math.round(dashboardData.avg_response_time_ms) + 'ms';
+            document.getElementById('avgConfidence').textContent = dashboardData.avg_confidence_score.toFixed(2);
+            document.getElementById('activeSessions').textContent = formatNumber(dashboardData.active_sessions_24h);
+            document.getElementById('dataSources').textContent = formatNumber(dashboardData.total_data_sources);
 
-            if (queries.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #6b7280;">
-                        No query data available
-                    </div>
-                `;
-                return;
-            }
+            // Update charts
+            updateQueryTypeChart(dashboardData);
+            updateTokenUsageChart(dashboardData.token_usage);
 
-            container.innerHTML = queries.map(query => `
-                <div class="cost-item">
-                    <div class="cost-query">${query.query_text}</div>
-                    <div class="cost-tokens">${formatNumber(query.total_tokens)} tokens</div>
-                    <div class="cost-amount">${formatCurrency(query.cost_usd)}</div>
+            // Update tables
+            updateDataSourcesTable(sourcesData.sources);
+            updateCostBreakdown(costsData.queries);
+
+            // Show dashboard content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            document.getElementById('loading').innerHTML = `
+                <div>
+                    <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
                 </div>
-            `).join('');
+                <div style="color: #ef4444;">Error loading dashboard data: ${error.message}</div>
+            `;
         }
+    }
 
-        // Refresh dashboard
-        function refreshDashboard() {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('dashboardContent').style.display = 'none';
-            loadDashboardData();
-        }
+    // ---------------------------
+    // Update charts
+    // ---------------------------
+    function updateQueryTypeChart(data) {
+        const ctx = document.getElementById('queryTypeChart');
+        if (queryTypeChart) queryTypeChart.destroy();
 
-        // Upload Document Function
-        async function uploadDocument(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const statusDiv = document.getElementById('uploadStatus');
-            statusDiv.className = 'upload-status loading';
-            statusDiv.style.display = 'block';
-            statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch('/api/upload/document/', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    statusDiv.className = 'upload-status success';
-                    statusDiv.innerHTML = `
-                        <i class="fas fa-check-circle"></i>
-                        <strong>Success!</strong> ${file.name} uploaded successfully.
-                        ${data.chunks_created} chunks created.
-                    `;
-
-                    // Reset file input
-                    event.target.value = '';
-
-                    // Refresh dashboard after 2 seconds
-                    setTimeout(() => {
-                        refreshDashboard();
-                    }, 2000);
-                } else {
-                    throw new Error(data.error || 'Upload failed');
-                }
-            } catch (error) {
-                statusDiv.className = 'upload-status error';
-                statusDiv.innerHTML = `
-                    <i class="fas fa-exclamation-circle"></i>
-                    <strong>Error!</strong> ${error.message}
-                `;
-            }
-        }
-
-        // Upload CSV Function
-        async function uploadCSV(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const statusDiv = document.getElementById('uploadStatus');
-            statusDiv.className = 'upload-status loading';
-            statusDiv.style.display = 'block';
-            statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch('/api/upload/csv/', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    statusDiv.className = 'upload-status success';
-                    statusDiv.innerHTML = `
-                        <i class="fas fa-check-circle"></i>
-                        <strong>Success!</strong> ${file.name} uploaded as table '${data.table_name}'.
-                        ${data.row_count} rows, ${data.column_count} columns.
-                    `;
-
-                    // Reset file input
-                    event.target.value = '';
-
-                    // Refresh dashboard after 2 seconds
-                    setTimeout(() => {
-                        refreshDashboard();
-                    }, 2000);
-                } else {
-                    throw new Error(data.error || 'Upload failed');
-                }
-            } catch (error) {
-                statusDiv.className = 'upload-status error';
-                statusDiv.innerHTML = `
-                    <i class="fas fa-exclamation-circle"></i>
-                    <strong>Error!</strong> ${error.message}
-                `;
-            }
-        }
-
-        // Load data on page load
-        window.addEventListener('load', () => {
-            loadDashboardData();
+        queryTypeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['SQL Queries', 'RAG Queries', 'Hybrid Queries'],
+                datasets: [{
+                    data: [data.sql_queries_count, data.rag_queries_count, data.hybrid_queries_count],
+                    backgroundColor: ['#667eea', '#764ba2', '#f687b3']
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
         });
-    </script>
+    }
+
+    function updateTokenUsageChart(tokenData) {
+        const ctx = document.getElementById('tokenUsageChart');
+        if (tokenUsageChart) tokenUsageChart.destroy();
+
+        tokenUsageChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Prompt Tokens', 'Completion Tokens'],
+                datasets: [{
+                    label: 'Token Count',
+                    data: [tokenData.total_prompt_tokens, tokenData.total_completion_tokens],
+                    backgroundColor: ['#667eea', '#764ba2']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // ---------------------------
+    // Update data sources table
+    // ---------------------------
+    function updateDataSourcesTable(sources) {
+        const tbody = document.getElementById('dataSourcesTableBody');
+
+        if (!sources || sources.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 20px; color: #6b7280;">
+                        No data sources available
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = sources.map(source => {
+            let badgeClass = 'badge-pdf';
+            if (source.source_type === 'csv_table') badgeClass = 'badge-csv';
+            else if (source.source_type === 'docx_document') badgeClass = 'badge-docx';
+
+            const rowsOrChunks = source.source_type === 'csv_table' ? source.row_count : source.chunk_count;
+            const columns = source.columns?.length > 0 ? source.columns.length : '-';
+            const fileUrl = source.file_url || `/pdfs/${source.source_name}`;
+
+            return `
+                <tr style="cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')">
+                    <td>${source.source_name}</td>
+                    <td><span class="badge ${badgeClass}">${source.source_type.replace('_', ' ').toUpperCase()}</span></td>
+                    <td>${formatNumber(rowsOrChunks)}</td>
+                    <td>${formatNumber(source.file_size_kb)}</td>
+                    <td>${columns}</td>
+                </tr>`;
+        }).join('');
+    }
+
+    // ---------------------------
+    // Update cost breakdown
+    // ---------------------------
+    function updateCostBreakdown(queries) {
+        const container = document.getElementById('costBreakdownList');
+        if (!queries || queries.length === 0) {
+            container.innerHTML = `<div style="text-align: center; padding: 20px; color: #6b7280;">No query data available</div>`;
+            return;
+        }
+
+        container.innerHTML = queries.map(query => `
+            <div class="cost-item">
+                <div class="cost-query">${query.query_text}</div>
+                <div class="cost-tokens">${formatNumber(query.total_tokens)} tokens</div>
+                <div class="cost-amount">${formatCurrency(query.cost_usd)}</div>
+            </div>`).join('');
+    }
+
+    // ---------------------------
+    // Refresh dashboard
+    // ---------------------------
+    function refreshDashboard() {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('dashboardContent').style.display = 'none';
+        loadDashboardData();
+    }
+
+    // ---------------------------
+    // Upload functions
+    // ---------------------------
+    async function uploadDocument(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const statusDiv = document.getElementById('uploadStatus');
+        statusDiv.className = 'upload-status loading';
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/upload/document/', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                statusDiv.className = 'upload-status success';
+                statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> <strong>Success!</strong> ${file.name} uploaded successfully. ${data.chunks_created} chunks created.`;
+                event.target.value = '';
+                setTimeout(refreshDashboard, 2000);
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        } catch (error) {
+            statusDiv.className = 'upload-status error';
+            statusDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>Error!</strong> ${error.message}`;
+        }
+    }
+
+    async function uploadCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const statusDiv = document.getElementById('uploadStatus');
+        statusDiv.className = 'upload-status loading';
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading ${file.name}...`;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/upload/csv/', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                statusDiv.className = 'upload-status success';
+                statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> <strong>Success!</strong> ${file.name} uploaded as table '${data.table_name}'. ${data.row_count} rows, ${data.column_count} columns.`;
+                event.target.value = '';
+                setTimeout(refreshDashboard, 2000);
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        } catch (error) {
+            statusDiv.className = 'upload-status error';
+            statusDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>Error!</strong> ${error.message}`;
+        }
+    }
+
+    // ---------------------------
+    // Load dashboard on page load
+    // ---------------------------
+    window.addEventListener('load', () => {
+        loadDashboardData();
+    });
+</script>
+
 </body>
 </html>

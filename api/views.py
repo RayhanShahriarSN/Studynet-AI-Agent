@@ -136,7 +136,8 @@ def user_view(request):
 @never_cache
 def developer_dashboard_view(request):
     """Serve the developer dashboard page"""
-    return render(request, 'developer_dashboard.html')
+    token = request.session.get("token", "")
+    return render(request, "developer_dashboard.html", {"token": token})
 
 
 
@@ -144,7 +145,7 @@ def developer_dashboard_view(request):
 class HealthCheckView(APIView):
     """Health check endpoint"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         return Response({
@@ -319,7 +320,7 @@ class QueryProcessView(APIView):
 class DocumentUploadView(APIView):
     """Upload and process a document"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -400,7 +401,7 @@ class DocumentUploadView(APIView):
 class TextUploadView(APIView):
     """Upload raw text content"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
     parser_classes = [JSONParser]
 
     def post(self, request):
@@ -440,7 +441,7 @@ class TextUploadView(APIView):
 class CSVUploadView(APIView):
     """Upload CSV files and make them queryable via SQL"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -541,7 +542,7 @@ class CSVUploadView(APIView):
 class MemoryView(APIView):
     """Get conversation memory for a session"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request, session_id):
         try:
@@ -579,7 +580,7 @@ class MemoryView(APIView):
 class SessionsListView(APIView):
     """List all active sessions"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         try:
@@ -603,7 +604,7 @@ class SessionsListView(APIView):
 class MetricsView(APIView):
     """Get system metrics"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         try:
@@ -635,7 +636,7 @@ class MetricsView(APIView):
 class KnowledgeBaseStatusView(APIView):
     """Get knowledge base status and statistics"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         try:
@@ -662,7 +663,7 @@ class KnowledgeBaseStatusView(APIView):
 class KnowledgeBaseReloadView(APIView):
     """Reload knowledge base from PDFs folder"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def post(self, request):
         try:
@@ -699,7 +700,7 @@ class KnowledgeBaseReloadView(APIView):
 class VectorStoreClearView(APIView):
     """Clear the entire vector store (use with caution)"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def delete(self, request):
         try:
@@ -723,7 +724,7 @@ class VectorStoreClearView(APIView):
 class AnalyticsQueryStatsView(APIView):
     """Get query analytics and statistics"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         try:
@@ -775,7 +776,7 @@ class AnalyticsQueryStatsView(APIView):
 class AnalyticsSourceStatsView(APIView):
     """Get data source statistics"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         try:
@@ -813,7 +814,7 @@ class AnalyticsSourceStatsView(APIView):
 class SystemReportView(APIView):
     """Generate system health report"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         try:
@@ -879,7 +880,7 @@ class SystemReportView(APIView):
 class UsageReportView(APIView):
     """Generate usage report"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
 
     def get(self, request):
         try:
@@ -948,7 +949,7 @@ class UsageReportView(APIView):
 class SQLExportView(APIView):
     """Export SQL query results to CSV or JSON"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAuthenticated]
+    permission_classes = [isAdminUser]
     parser_classes = [JSONParser]
 
     def post(self, request):

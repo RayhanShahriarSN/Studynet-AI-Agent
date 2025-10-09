@@ -1716,11 +1716,11 @@ body::before {
     align-items: center;
 }
 
-.signup-btn {
-    background: #9B2063;
+.logout-btn {
+    background: #282F43;
     color: white;
     padding: 15px 30px;
-    border-radius: 25px;
+    border-radius: 50px;
     text-decoration: none;
     font-weight: 500;
     font-size: 17px;
@@ -1728,10 +1728,10 @@ body::before {
     margin-right: 30px;
 }
 
-.signup-btn:hover {
+.logout-btn:hover {
     background: white;
     color: #282F43;
-    border: 1px solid #282F43;
+    border: 1px solid ;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }

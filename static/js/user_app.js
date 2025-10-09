@@ -1,19 +1,76 @@
-// RAG AI Agent Frontend JavaScript
+// RAG AI Agent Frontend JavaScript - FIXED VERSION
 class RAGAgent {
   constructor() {
     this.apiBase = "/api";
     this.sessionId = this.generateSessionId();
     this.isLoading = false;
-    this.recentQueries = JSON.parse(
-      localStorage.getItem("recentQueries") || "[]"
-    );
-
     
+    // ✅ FIX: Wait for DOM to fully load, then get token
+    // The token script tag needs to execute first
+    
+    
+    // Store recent queries in memory instead of localStorage
+    this.recentQueries = [];
+
     this.initializeElements();
     this.bindEvents();
-    this.loadSystemStatus();
+    
+    // ✅ FIX: Initialize token after DOM is ready
+    this.initializeToken();
+    
     this.updateRecentQueries();
     this.updateSessionDisplay();
+    
+    // ✅ FIX 2: Prevent BFCache - Force page reload on back/forward
+    this.preventBFCache();
+  }
+
+  // ✅ NEW: Initialize token and load system status
+  initializeToken() {
+    // Get token from window (set by template script tag)
+    this.authToken = token;
+    
+    console.log("Token initialized:", this.authToken ? "✅ Token found" : "❌ No token");
+    
+    // Only load system status if we have a token
+    if (this.authToken) {
+      this.loadSystemStatus();
+    } else {
+      console.warn("No token available - skipping system status load");
+      // Set status as unknown if no token
+      if (this.elements.apiStatus) {
+        this.elements.apiStatus.textContent = "Login Required";
+        this.elements.apiStatus.className = "status-value offline";
+      }
+      if (this.elements.kbStatus) {
+        this.elements.kbStatus.textContent = "Login Required";
+        this.elements.kbStatus.className = "status-value offline";
+      }
+    }
+  }
+
+  // ✅ FIX 2: Prevent Browser Forward/Backward Cache
+  preventBFCache() {
+    // Disable BFCache by adding pageshow event listener
+    window.addEventListener('pageshow', (event) => {
+      // Check if page was loaded from cache (persisted)
+      if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+        console.log('Page loaded from cache - forcing reload');
+        window.location.reload();
+      }
+    });
+
+    // Also prevent caching with unload event
+    window.addEventListener('unload', () => {
+      // This ensures browser doesn't cache the page
+    });
+
+    // Additional cache prevention
+    window.addEventListener('pagehide', (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
   }
 
   initializeElements() {
@@ -75,7 +132,6 @@ class RAGAgent {
       sqlExportOutput: document.getElementById("sqlExportOutput"),
       // Monitoring section
       getHealthCheck: document.getElementById("getHealthCheck"),
-      healthOutput: document.getElementById("healthOutput"),
       getSystemMetrics: document.getElementById("getSystemMetrics"),
       resetSystemMetrics: document.getElementById("resetSystemMetrics"),
       systemMetricsOutput: document.getElementById("systemMetricsOutput"),
@@ -121,26 +177,46 @@ class RAGAgent {
     // Clear chat
     this.elements.clearChat.addEventListener("click", () => this.clearChat());
 
+    // ✅ Logout button handler
+    const logoutBtn = document.getElementById('logoutBtn') || 
+                      document.querySelector('a[href*="login_page"]');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleLogout();
+      });
+    }
+
     // Upload document
-    this.elements.uploadDoc.addEventListener("click", () =>
-      this.showUploadModal()
-    );
-    this.elements.closeModal.addEventListener("click", () =>
-      this.hideUploadModal()
-    );
-    this.elements.uploadArea.addEventListener("click", () =>
-      this.elements.fileInput.click()
-    );
-    this.elements.fileInput.addEventListener("change", (e) =>
-      this.handleFileUpload(e)
-    );
+    if (this.elements.uploadDoc) {
+      this.elements.uploadDoc.addEventListener("click", () =>
+        this.showUploadModal()
+      );
+    }
+    if (this.elements.closeModal) {
+      this.elements.closeModal.addEventListener("click", () =>
+        this.hideUploadModal()
+      );
+    }
+    if (this.elements.uploadArea) {
+      this.elements.uploadArea.addEventListener("click", () =>
+        this.elements.fileInput.click()
+      );
+    }
+    if (this.elements.fileInput) {
+      this.elements.fileInput.addEventListener("change", (e) =>
+        this.handleFileUpload(e)
+      );
+    }
 
     // Close modal on outside click
-    this.elements.uploadModal.addEventListener("click", (e) => {
-      if (e.target === this.elements.uploadModal) {
-        this.hideUploadModal();
-      }
-    });
+    if (this.elements.uploadModal) {
+      this.elements.uploadModal.addEventListener("click", (e) => {
+        if (e.target === this.elements.uploadModal) {
+          this.hideUploadModal();
+        }
+      });
+    }
 
     // Auto-resize input
     this.elements.queryInput.addEventListener("input", () => {
@@ -150,12 +226,16 @@ class RAGAgent {
     });
 
     // Developer dashboard events
-    this.elements.developerToggle.addEventListener("click", () =>
-      this.toggleDeveloperMode()
-    );
-    this.elements.closeDeveloperMode.addEventListener("click", () =>
-      this.toggleDeveloperMode()
-    );
+    if (this.elements.developerToggle) {
+      this.elements.developerToggle.addEventListener("click", () =>
+        this.toggleDeveloperMode()
+      );
+    }
+    if (this.elements.closeDeveloperMode) {
+      this.elements.closeDeveloperMode.addEventListener("click", () =>
+        this.toggleDeveloperMode()
+      );
+    }
 
     // Navigation events
     this.elements.navButtons.forEach((btn) => {
@@ -243,9 +323,19 @@ class RAGAgent {
     );
   }
 
+  // ✅ FIXED: Added token authentication
   async sendMessage() {
     const query = this.elements.queryInput.value.trim();
     if (!query || this.isLoading) return;
+
+    // ✅ Check token before sending
+    if (!this.authToken) {
+      this.showNotification("Authentication required. Please login.", "error");
+      setTimeout(() => {
+        window.location.href = "/login/";
+      }, 2000);
+      return;
+    }
 
     this.isLoading = true;
     this.elements.sendButton.disabled = true;
@@ -262,64 +352,67 @@ class RAGAgent {
     // Show typing indicator
     this.showTypingIndicator();
 
-  try {
-    const startTime = Date.now();
-    // <-- fetch token
+    try {
+      const startTime = Date.now();
 
-    if (!token) {
-      this.addMessage("assistant", "Error: No token found. Please log in.");
-      return;
+      const response = await this.makeRequest("/query/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.authToken}`,
+        },
+        body: JSON.stringify({
+          query: query,
+          session_id: this.sessionId,
+          use_web_search: this.elements.useWebSearch.checked,
+          enhance_formatting: this.elements.enhanceFormatting.checked,
+        }),
+      });
+
+      const endTime = Date.now();
+      const responseTime = (endTime - startTime) / 1000;
+
+      this.hideTypingIndicator();
+
+      if (response.ok) {
+        const data = await response.json();
+        this.addMessage(
+          "assistant",
+          data.answer,
+          data.sources,
+          data.confidence_score,
+          data.web_search_used
+        );
+        this.updateResponseTime(responseTime);
+      } else {
+        let errorMsg = "Something went wrong";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorData.detail || errorMsg;
+        } catch {}
+        
+        // ✅ Handle authentication errors
+        if (response.status === 401 || response.status === 403) {
+          this.showNotification("Session expired. Please login again.", "error");
+          setTimeout(() => {
+            window.location.href = "/login/";
+          }, 2000);
+          return;
+        }
+        
+        this.addMessage("assistant", `Error: ${errorMsg}`);
+      }
+
+    } catch (error) {
+      this.hideTypingIndicator();
+      this.addMessage("assistant", `Error: ${error.message}`);
+    } finally {
+      this.isLoading = false;
+      this.elements.sendButton.disabled = false;
+      this.elements.queryInput.disabled = false;
+      this.elements.queryInput.focus();
     }
-
-    const response = await this.makeRequest("/query/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`, // <-- add token here
-      },
-      body: JSON.stringify({
-        query: query,
-        session_id: this.sessionId,
-        use_web_search: this.elements.useWebSearch.checked,
-        enhance_formatting: this.elements.enhanceFormatting.checked,
-      }),
-    });
-
-    const endTime = Date.now();
-    const responseTime = (endTime - startTime) / 1000;
-
-    this.hideTypingIndicator();
-
-    if (response.ok) {
-      const data = await response.json();
-      this.addMessage(
-        "assistant",
-        data.answer,
-        data.sources,
-        data.confidence_score,
-        data.web_search_used
-      );
-      this.updateResponseTime(responseTime);
-    } else {
-      let errorMsg = "Something went wrong";
-      try {
-        const errorData = await response.json();
-        errorMsg = errorData.error || errorData.detail || errorMsg;
-      } catch {}
-      this.addMessage("assistant", `Error: ${errorMsg}`);
-    }
-
-  } catch (error) {
-    this.hideTypingIndicator();
-    this.addMessage("assistant", `Error: ${error.message}`);
-  } finally {
-    this.isLoading = false;
-    this.elements.sendButton.disabled = false;
-    this.elements.queryInput.disabled = false;
-    this.elements.queryInput.focus();
   }
-  }
-
 
   addMessage(
     role,
@@ -580,33 +673,37 @@ class RAGAgent {
 
   clearChat() {
     this.elements.chatMessages.innerHTML = `
-              
-        
-       
             <div class="welcome-message">
-            
               <h1>What can I help you with today?</h1>
               <p>Ask me anything and I'll provide detailed, helpful responses</p>
-
             </div>
-          
         `;
     this.sessionId = this.generateSessionId();
     this.updateSessionDisplay();
   }
 
   showUploadModal() {
-    this.elements.uploadModal.style.display = "block";
-    this.elements.uploadProgress.style.display = "none";
+    if (this.elements.uploadModal) {
+      this.elements.uploadModal.style.display = "block";
+      this.elements.uploadProgress.style.display = "none";
+    }
   }
 
   hideUploadModal() {
-    this.elements.uploadModal.style.display = "none";
+    if (this.elements.uploadModal) {
+      this.elements.uploadModal.style.display = "none";
+    }
   }
 
+  // ✅ FIXED: Added token authentication
   async handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (!this.authToken) {
+      this.showNotification("Authentication required. Please login.", "error");
+      return;
+    }
 
     this.elements.uploadProgress.style.display = "block";
     this.elements.uploadArea.style.display = "none";
@@ -617,6 +714,9 @@ class RAGAgent {
     try {
       const response = await this.makeRequest("/upload/document/", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.authToken}`,
+        },
         body: formData,
       });
 
@@ -640,10 +740,21 @@ class RAGAgent {
     }
   }
 
+  // ✅ FIXED: Added token authentication
   async loadSystemStatus() {
     try {
+      if (!this.authToken) {
+        console.log("No token available for system status");
+        return;
+      }
+
       // Check API status
-      const apiResponse = await this.makeRequest("/health/");
+      const apiResponse = await this.makeRequest("/health/", {
+        headers: {
+          "Authorization": `Bearer ${this.authToken}`,
+        },
+      });
+      
       if (apiResponse.ok && this.elements.apiStatus) {
         this.elements.apiStatus.textContent = "Online";
         this.elements.apiStatus.className = "status-value online";
@@ -652,7 +763,12 @@ class RAGAgent {
       }
 
       // Check knowledge base status
-      const kbResponse = await this.makeRequest("/knowledge-base/status/");
+      const kbResponse = await this.makeRequest("/knowledge-base/status/", {
+        headers: {
+          "Authorization": `Bearer ${this.authToken}`,
+        },
+      });
+      
       if (kbResponse.ok) {
         const kbData = await kbResponse.json();
         this.elements.kbStatus.textContent = `${kbData.total_documents} documents`;
@@ -660,17 +776,26 @@ class RAGAgent {
       }
 
       // Get session count
-      const sessionsResponse = await this.makeRequest("/sessions/");
+      const sessionsResponse = await this.makeRequest("/sessions/", {
+        headers: {
+          "Authorization": `Bearer ${this.authToken}`,
+        },
+      });
+      
       if (sessionsResponse.ok) {
         const sessionsData = await sessionsResponse.json();
         this.elements.sessionCount.textContent = sessionsData.count;
       }
     } catch (error) {
       console.error("Error loading system status:", error);
-      this.elements.apiStatus.textContent = "Offline";
-      this.elements.apiStatus.className = "status-value offline";
-      this.elements.kbStatus.textContent = "Unknown";
-      this.elements.kbStatus.className = "status-value offline";
+      if (this.elements.apiStatus) {
+        this.elements.apiStatus.textContent = "Offline";
+        this.elements.apiStatus.className = "status-value offline";
+      }
+      if (this.elements.kbStatus) {
+        this.elements.kbStatus.textContent = "Unknown";
+        this.elements.kbStatus.className = "status-value offline";
+      }
     }
   }
 
@@ -685,7 +810,6 @@ class RAGAgent {
   addToRecentQueries(query) {
     this.recentQueries.unshift(query);
     this.recentQueries = this.recentQueries.slice(0, 10); // Keep only last 10
-    localStorage.setItem("recentQueries", JSON.stringify(this.recentQueries));
     this.updateRecentQueries();
   }
 
@@ -749,23 +873,47 @@ class RAGAgent {
     }, 3000);
   }
 
+  // ✅ FIXED: Now includes Authorization header by default
   async makeRequest(endpoint, options = {}) {
     const url = this.apiBase + endpoint;
 
-    // Don't set Content-Type for FormData (browser will set it with boundary)
-    const defaultOptions = {};
-    if (!(options.body instanceof FormData)) {
-      defaultOptions.headers = {
-        "Content-Type": "application/json",
-      };
+    // Set default headers
+    const defaultHeaders = {};
+    
+    // Add Authorization header if token exists
+    if (this.authToken) {
+      defaultHeaders["Authorization"] = `Bearer ${this.authToken}`;
     }
+
+    // Don't set Content-Type for FormData (browser will set it with boundary)
+    if (!(options.body instanceof FormData)) {
+      defaultHeaders["Content-Type"] = "application/json";
+    }
+
+    // Merge headers
+    const finalOptions = {
+      ...options,
+      headers: {
+        ...defaultHeaders,
+        ...(options.headers || {}),
+      },
+    };
 
     // Update debug info
     this.lastRequestTime = new Date().toLocaleTimeString();
     this.updateDebugInfo();
 
     try {
-      const response = await fetch(url, { ...defaultOptions, ...options });
+      const response = await fetch(url, finalOptions);
+      
+      // Handle authentication errors globally
+      if (response.status === 401 || response.status === 403) {
+        this.showNotification("Session expired. Please login again.", "error");
+        setTimeout(() => {
+          window.location.href = "/login/";
+        }, 2000);
+      }
+      
       return response;
     } catch (error) {
       this.errorCount++;
@@ -808,7 +956,7 @@ class RAGAgent {
     }
   }
 
-  // Overview Section Methods
+  // ✅ FIXED: All dashboard methods now include token
   async getMainDashboard() {
     try {
       const response = await this.makeRequest("/dashboard/");
@@ -821,9 +969,7 @@ class RAGAgent {
         2
       );
 
-      // Create dashboard chart
       this.createMainDashboardChart(data);
-
       this.showNotification("Complete dashboard loaded!", "success");
     } catch (error) {
       this.elements.mainDashboardOutput.style.display = "block";
@@ -849,9 +995,7 @@ class RAGAgent {
         2
       );
 
-      // Create token usage chart
       this.createTokenUsageChart(data);
-
       this.showNotification("Token usage retrieved!", "success");
     } catch (error) {
       this.elements.tokenUsageOutput.style.display = "block";
@@ -883,7 +1027,6 @@ class RAGAgent {
     }
   }
 
-  // Analytics Section Methods
   async getQueryAnalytics() {
     try {
       const days = this.elements.queryDays?.value || 7;
@@ -899,9 +1042,7 @@ class RAGAgent {
         2
       );
 
-      // Create query analytics chart
       this.createQueryAnalyticsChart(data);
-
       this.showNotification("Query analytics retrieved!", "success");
     } catch (error) {
       this.elements.queryAnalyticsOutput.style.display = "block";
@@ -929,7 +1070,6 @@ class RAGAgent {
     }
   }
 
-  // Reports Section Methods
   async getSystemReport() {
     try {
       const response = await this.makeRequest("/reports/system/");
@@ -968,7 +1108,6 @@ class RAGAgent {
     }
   }
 
-  // Data Management Section Methods
   async handleCsvUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1027,7 +1166,6 @@ class RAGAgent {
     try {
       const response = await this.makeRequest("/export/sql/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
       });
       const data = await response.json();
@@ -1042,7 +1180,6 @@ class RAGAgent {
     }
   }
 
-  // Monitoring Section Methods
   async getHealthCheck() {
     try {
       const response = await this.makeRequest("/health/");
@@ -1067,55 +1204,47 @@ class RAGAgent {
       return;
     }
 
-  try {
-     // must match login storage
-    if (!token) throw new Error("No token found. Please log in.");
+    try {
+      const response = await this.makeRequest("/query/", {
+        method: "POST",
+        body: JSON.stringify({
+          query: query,
+          session_id: sessionId,
+          use_web_search: true,
+          enhance_formatting: true,
+        }),
+      });
 
-    const response = await this.makeRequest("/query/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        query: query,
-        use_web_search: true,
-        enhance_formatting: true,
-      }),
-    });
+      if (!response.ok) {
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorData.detail || errorMsg;
+        } catch {}
+        throw new Error(errorMsg);
+      }
 
-    if (!response.ok) {
-      let errorMsg = `HTTP error! status: ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMsg = errorData.error || errorData.detail || errorMsg;
-      } catch {}
-      throw new Error(errorMsg);
+      const data = await response.json();
+      this.elements.queryOutput.style.display = "block";
+      this.elements.queryOutput.textContent = JSON.stringify(data, null, 2);
+      this.showNotification("Query processed successfully!", "success");
+
+    } catch (error) {
+      this.elements.queryOutput.style.display = "block";
+      this.elements.queryOutput.textContent = `Error: ${error.message}`;
+      this.showNotification("Query processing failed", "error");
     }
-
-    const data = await response.json();
-    this.elements.queryOutput.style.display = "block";
-    this.elements.queryOutput.textContent = JSON.stringify(data, null, 2);
-    this.showNotification("Query processed successfully!", "success");
-
-  } catch (error) {
-    this.elements.queryOutput.style.display = "block";
-    this.elements.queryOutput.textContent = `Error: ${error.message}`;
-    this.showNotification("Query processing failed", "error");
   }
-    }
 
   // Chart Creation Methods
   createMainDashboardChart(data) {
     const ctx = document.getElementById("mainDashboardChart");
     if (!ctx) return;
 
-    // Destroy existing chart
     if (this.charts.mainDashboard) {
       this.charts.mainDashboard.destroy();
     }
 
-    // Extract data for visualization
     const labels = ["Total Queries", "Successful Queries", "Failed Queries"];
     const values = [
       data.total_queries || 0,
@@ -1157,16 +1286,14 @@ class RAGAgent {
     const ctx = document.getElementById("tokenUsageChart");
     if (!ctx) return;
 
-    // Destroy existing chart
     if (this.charts.tokenUsage) {
       this.charts.tokenUsage.destroy();
     }
 
-    // Extract token data
     const labels = ["Prompt Tokens", "Completion Tokens", "Total Tokens"];
     const values = [
-      data.prompt_tokens || 0,
-      data.completion_tokens || 0,
+      data.total_prompt_tokens || 0,
+      data.total_completion_tokens || 0,
       data.total_tokens || 0,
     ];
 
@@ -1224,12 +1351,10 @@ class RAGAgent {
     const ctx = document.getElementById("queryAnalyticsChart");
     if (!ctx) return;
 
-    // Destroy existing chart
     if (this.charts.queryAnalytics) {
       this.charts.queryAnalytics.destroy();
     }
 
-    // Extract query type data
     const labels = ["SQL Queries", "RAG Queries", "Hybrid Queries"];
     const values = [
       data.sql_queries || 0,
@@ -1268,18 +1393,23 @@ class RAGAgent {
   }
 
   updateDebugInfo() {
-    this.elements.lastRequest.textContent = `Last Request: ${
-      this.lastRequestTime || "None"
-    }`;
-    this.elements.errorCount.textContent = `Errors: ${this.errorCount}`;
+    if (this.elements.lastRequest) {
+      this.elements.lastRequest.textContent = `Last Request: ${
+        this.lastRequestTime || "None"
+      }`;
+    }
+    if (this.elements.errorCount) {
+      this.elements.errorCount.textContent = `Errors: ${this.errorCount}`;
+    }
 
-    // Update connection status
-    this.elements.connectionStatus.innerHTML = `
-            <i class="fas fa-circle ${
-              this.errorCount > 0 ? "offline" : "online"
-            }"></i>
-            <span>Connection: ${this.errorCount > 0 ? "Issues" : "OK"}</span>
-        `;
+    if (this.elements.connectionStatus) {
+      this.elements.connectionStatus.innerHTML = `
+              <i class="fas fa-circle ${
+                this.errorCount > 0 ? "offline" : "online"
+              }"></i>
+              <span>Connection: ${this.errorCount > 0 ? "Issues" : "OK"}</span>
+          `;
+    }
   }
 
   async getMemoryForSession() {
@@ -1378,7 +1508,6 @@ class RAGAgent {
       this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
       this.showNotification("Knowledge base reloaded successfully!", "success");
 
-      // Refresh system status
       this.loadSystemStatus();
     } catch (error) {
       this.elements.kbOutput.style.display = "block";
@@ -1412,7 +1541,6 @@ class RAGAgent {
       this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
       this.showNotification("Vector store cleared successfully!", "success");
 
-      // Refresh system status
       this.loadSystemStatus();
     } catch (error) {
       this.elements.kbOutput.style.display = "block";
@@ -1466,26 +1594,25 @@ class RAGAgent {
     }
   }
 
-  async testApiEndpoint() {
-    const endpoint = this.elements.testEndpoint.value.trim();
-    if (!endpoint) {
-      this.showNotification("Please enter an endpoint", "error");
-      return;
-    }
-
+  // ✅ LOGOUT HANDLER - Using Django's session-based logout
+  async handleLogout() {
     try {
-      const response = await this.makeRequest(endpoint);
-      const data = await response.json();
+      // Show loading notification
+      this.showNotification("Logging out...", "info");
 
-      this.elements.apiTestOutput.style.display = "block";
-      this.elements.apiTestOutput.textContent = `Status: ${
-        response.status
-      }\n\n${JSON.stringify(data, null, 2)}`;
-      this.showNotification("API test completed!", "success");
+      // Clear token from memory
+      this.authToken = "";
+      
+      // Redirect to Django's logout_page which handles everything
+      // This calls logout_user(), clears session, and redirects to login
+      setTimeout(() => {
+        window.location.replace("/logout/");
+      }, 500);
+
     } catch (error) {
-      this.elements.apiTestOutput.style.display = "block";
-      this.elements.apiTestOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("API test failed", "error");
+      console.error("Logout error:", error);
+      // Still redirect even if something fails
+      window.location.replace("/logout/");
     }
   }
 }
