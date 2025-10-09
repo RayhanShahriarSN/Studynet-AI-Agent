@@ -145,7 +145,7 @@ def developer_dashboard_view(request):
 class HealthCheckView(APIView):
     """Health check endpoint"""
     authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [isAdminUser]
+    permission_classes = [isAuthenticated]
 
     def get(self, request):
         return Response({

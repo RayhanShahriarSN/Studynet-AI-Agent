@@ -83,10 +83,15 @@ class ConversationMemoryManager:
         """Get formatted conversation context"""
         try:
             session = ConversationSession.objects.get(session_id=session_id)
-            messages = session.messages.all()
+            messages = session.messages.all().order_by('timestamp')
 
-            if max_messages and max_messages > 0 and len(messages) > max_messages:
-                messages = messages[-max_messages:]
+            if max_messages and max_messages > 0:
+                # Get the last N messages using reverse ordering
+                messages = session.messages.all().order_by('-timestamp')[:max_messages]
+                # Reverse again to get chronological order
+                messages = list(reversed(messages))
+            else:
+                messages = list(messages)
 
             # Format messages for context
             context_parts = []

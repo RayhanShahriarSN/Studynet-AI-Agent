@@ -17,8 +17,8 @@ class BearerTokenMiddleware(MiddlewareMixin):
         '/signup/',
         '/admin/',
         '/static/',
-        '/media/',
-        '/api/developer/'
+        '/media/'
+        
     ]
     
     def process_request(self, request):

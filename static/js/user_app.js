@@ -1,13 +1,9 @@
-// RAG AI Agent Frontend JavaScript - FIXED VERSION
+// RAG AI Agent Frontend JavaScript - SIMPLIFIED VERSION
 class RAGAgent {
   constructor() {
     this.apiBase = "/api";
     this.sessionId = this.generateSessionId();
     this.isLoading = false;
-    
-    // ✅ FIX: Wait for DOM to fully load, then get token
-    // The token script tag needs to execute first
-    
     
     // Store recent queries in memory instead of localStorage
     this.recentQueries = [];
@@ -19,37 +15,27 @@ class RAGAgent {
     this.initializeToken();
     
     this.updateRecentQueries();
-    this.updateSessionDisplay();
     
-    // ✅ FIX 2: Prevent BFCache - Force page reload on back/forward
+    // ✅ FIX: Prevent BFCache - Force page reload on back/forward
     this.preventBFCache();
   }
 
   // ✅ NEW: Initialize token and load system status
   initializeToken() {
-    // Get token from window (set by template script tag)
-    this.authToken = token;
+    // Try multiple ways to get the token from the template
+    this.authToken = window.token || token || "";
     
     console.log("Token initialized:", this.authToken ? "✅ Token found" : "❌ No token");
+    console.log("Token value:", this.authToken);
     
-    // Only load system status if we have a token
-    if (this.authToken) {
-      this.loadSystemStatus();
-    } else {
-      console.warn("No token available - skipping system status load");
-      // Set status as unknown if no token
-      if (this.elements.apiStatus) {
-        this.elements.apiStatus.textContent = "Login Required";
-        this.elements.apiStatus.className = "status-value offline";
-      }
-      if (this.elements.kbStatus) {
-        this.elements.kbStatus.textContent = "Login Required";
-        this.elements.kbStatus.className = "status-value offline";
-      }
+    // Validate token
+    if (!this.authToken || this.authToken === "None" || this.authToken.trim() === "") {
+      console.warn("No valid token available");
+      this.authToken = "";
     }
   }
 
-  // ✅ FIX 2: Prevent Browser Forward/Backward Cache
+  // ✅ FIX: Prevent Browser Forward/Backward Cache
   preventBFCache() {
     // Disable BFCache by adding pageshow event listener
     window.addEventListener('pageshow', (event) => {
@@ -81,85 +67,9 @@ class RAGAgent {
       useWebSearch: document.getElementById("useWebSearch"),
       enhanceFormatting: document.getElementById("enhanceFormatting"),
       clearChat: document.getElementById("clearChat"),
-      uploadDoc: document.getElementById("uploadDoc"),
-      uploadModal: document.getElementById("uploadModal"),
-      closeModal: document.getElementById("closeModal"),
-      fileInput: document.getElementById("fileInput"),
-      uploadArea: document.getElementById("uploadArea"),
-      uploadProgress: document.getElementById("uploadProgress"),
       loadingOverlay: document.getElementById("loadingOverlay"),
-      apiStatus: document.getElementById("apiStatus"),
-      kbStatus: document.getElementById("kbStatus"),
-      sessionCount: document.getElementById("sessionCount"),
-      sessionId: document.getElementById("sessionId"),
-      responseTime: document.getElementById("responseTime"),
       recentQueries: document.getElementById("recentQueries"),
-      // Developer dashboard elements
-      developerToggle: document.getElementById("developerToggle"),
-      developerMode: document.getElementById("developerMode"),
-      closeDeveloperMode: document.getElementById("closeDeveloperMode"),
-      // Navigation
-      navButtons: document.querySelectorAll(".nav-btn"),
-      dashboardSections: document.querySelectorAll(".dashboard-section"),
-      // Overview section
-      getMainDashboard: document.getElementById("getMainDashboard"),
-      mainDashboardOutput: document.getElementById("mainDashboardOutput"),
-      getTokenUsage: document.getElementById("getTokenUsage"),
-      tokenDays: document.getElementById("tokenDays"),
-      tokenSessionId: document.getElementById("tokenSessionId"),
-      tokenUsageOutput: document.getElementById("tokenUsageOutput"),
-      getCostBreakdown: document.getElementById("getCostBreakdown"),
-      costLimit: document.getElementById("costLimit"),
-      costOrder: document.getElementById("costOrder"),
-      costBreakdownOutput: document.getElementById("costBreakdownOutput"),
-      // Analytics section
-      getQueryAnalytics: document.getElementById("getQueryAnalytics"),
-      queryDays: document.getElementById("queryDays"),
-      queryAnalyticsOutput: document.getElementById("queryAnalyticsOutput"),
-      getDataSourceStats: document.getElementById("getDataSourceStats"),
-      dataSourceOutput: document.getElementById("dataSourceOutput"),
-      // Reports section
-      getSystemReport: document.getElementById("getSystemReport"),
-      systemReportOutput: document.getElementById("systemReportOutput"),
-      getUsageReport: document.getElementById("getUsageReport"),
-      usageReportOutput: document.getElementById("usageReportOutput"),
-      // Data management section
-      csvUpload: document.getElementById("csvUpload"),
-      docUpload: document.getElementById("docUpload"),
-      uploadOutput: document.getElementById("uploadOutput"),
-      exportSql: document.getElementById("exportSql"),
-      sqlQuery: document.getElementById("sqlQuery"),
-      sqlExportOutput: document.getElementById("sqlExportOutput"),
-      // Monitoring section
-      getHealthCheck: document.getElementById("getHealthCheck"),
-      getSystemMetrics: document.getElementById("getSystemMetrics"),
-      resetSystemMetrics: document.getElementById("resetSystemMetrics"),
-      systemMetricsOutput: document.getElementById("systemMetricsOutput"),
-      getKbStatus: document.getElementById("getKbStatus"),
-      reloadKb: document.getElementById("reloadKb"),
-      clearVectorStore: document.getElementById("clearVectorStore"),
-      kbOutput: document.getElementById("kbOutput"),
-      // Memory section
-      devSessionId: document.getElementById("devSessionId"),
-      getMemory: document.getElementById("getMemory"),
-      clearMemory: document.getElementById("clearMemory"),
-      listSessions: document.getElementById("listSessions"),
-      memoryOutput: document.getElementById("memoryOutput"),
-      processQuery: document.getElementById("processQuery"),
-      testQuery: document.getElementById("testQuery"),
-      querySessionId: document.getElementById("querySessionId"),
-      queryOutput: document.getElementById("queryOutput"),
-      // Debug info
-      connectionStatus: document.getElementById("connectionStatus"),
-      lastRequest: document.getElementById("lastRequest"),
-      errorCount: document.getElementById("errorCount"),
     };
-
-    // Initialize developer mode state
-    this.developerModeActive = false;
-    this.errorCount = 0;
-    this.lastRequestTime = null;
-    this.charts = {};
   }
 
   bindEvents() {
@@ -178,43 +88,11 @@ class RAGAgent {
     this.elements.clearChat.addEventListener("click", () => this.clearChat());
 
     // ✅ Logout button handler
-    const logoutBtn = document.getElementById('logoutBtn') || 
-                      document.querySelector('a[href*="login_page"]');
+    const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', (e) => {
         e.preventDefault();
         this.handleLogout();
-      });
-    }
-
-    // Upload document
-    if (this.elements.uploadDoc) {
-      this.elements.uploadDoc.addEventListener("click", () =>
-        this.showUploadModal()
-      );
-    }
-    if (this.elements.closeModal) {
-      this.elements.closeModal.addEventListener("click", () =>
-        this.hideUploadModal()
-      );
-    }
-    if (this.elements.uploadArea) {
-      this.elements.uploadArea.addEventListener("click", () =>
-        this.elements.fileInput.click()
-      );
-    }
-    if (this.elements.fileInput) {
-      this.elements.fileInput.addEventListener("change", (e) =>
-        this.handleFileUpload(e)
-      );
-    }
-
-    // Close modal on outside click
-    if (this.elements.uploadModal) {
-      this.elements.uploadModal.addEventListener("click", (e) => {
-        if (e.target === this.elements.uploadModal) {
-          this.hideUploadModal();
-        }
       });
     }
 
@@ -224,97 +102,6 @@ class RAGAgent {
       this.elements.queryInput.style.height =
         this.elements.queryInput.scrollHeight + "px";
     });
-
-    // Developer dashboard events
-    if (this.elements.developerToggle) {
-      this.elements.developerToggle.addEventListener("click", () =>
-        this.toggleDeveloperMode()
-      );
-    }
-    if (this.elements.closeDeveloperMode) {
-      this.elements.closeDeveloperMode.addEventListener("click", () =>
-        this.toggleDeveloperMode()
-      );
-    }
-
-    // Navigation events
-    this.elements.navButtons.forEach((btn) => {
-      btn.addEventListener("click", (e) =>
-        this.switchDashboardSection(e.target.dataset.section)
-      );
-    });
-
-    // Overview section events
-    this.elements.getMainDashboard?.addEventListener("click", () =>
-      this.getMainDashboard()
-    );
-    this.elements.getTokenUsage?.addEventListener("click", () =>
-      this.getTokenUsage()
-    );
-    this.elements.getCostBreakdown?.addEventListener("click", () =>
-      this.getCostBreakdown()
-    );
-
-    // Analytics section events
-    this.elements.getQueryAnalytics?.addEventListener("click", () =>
-      this.getQueryAnalytics()
-    );
-    this.elements.getDataSourceStats?.addEventListener("click", () =>
-      this.getDataSourceStats()
-    );
-
-    // Reports section events
-    this.elements.getSystemReport?.addEventListener("click", () =>
-      this.getSystemReport()
-    );
-    this.elements.getUsageReport?.addEventListener("click", () =>
-      this.getUsageReport()
-    );
-
-    // Data management section events
-    this.elements.csvUpload?.addEventListener("change", (e) =>
-      this.handleCsvUpload(e)
-    );
-    this.elements.docUpload?.addEventListener("change", (e) =>
-      this.handleDocUpload(e)
-    );
-    this.elements.exportSql?.addEventListener("click", () =>
-      this.exportSqlQuery()
-    );
-
-    // Monitoring section events
-    this.elements.getHealthCheck?.addEventListener("click", () =>
-      this.getHealthCheck()
-    );
-    this.elements.getSystemMetrics?.addEventListener("click", () =>
-      this.getSystemMetrics()
-    );
-    this.elements.resetSystemMetrics?.addEventListener("click", () =>
-      this.resetSystemMetrics()
-    );
-    this.elements.getKbStatus?.addEventListener("click", () =>
-      this.getKnowledgeBaseStatus()
-    );
-    this.elements.reloadKb?.addEventListener("click", () =>
-      this.reloadKnowledgeBase()
-    );
-    this.elements.clearVectorStore?.addEventListener("click", () =>
-      this.clearVectorStore()
-    );
-
-    // Memory section events
-    this.elements.getMemory?.addEventListener("click", () =>
-      this.getMemoryForSession()
-    );
-    this.elements.clearMemory?.addEventListener("click", () =>
-      this.clearSessionMemory()
-    );
-    this.elements.listSessions?.addEventListener("click", () =>
-      this.listAllSessions()
-    );
-    this.elements.processQuery?.addEventListener("click", () =>
-      this.processTestQuery()
-    );
   }
 
   generateSessionId() {
@@ -329,7 +116,7 @@ class RAGAgent {
     if (!query || this.isLoading) return;
 
     // ✅ Check token before sending
-    if (!this.authToken) {
+    if (!this.authToken || this.authToken === "None" || this.authToken.trim() === "") {
       this.showNotification("Authentication required. Please login.", "error");
       setTimeout(() => {
         window.location.href = "/login/";
@@ -383,7 +170,6 @@ class RAGAgent {
           data.confidence_score,
           data.web_search_used
         );
-        this.updateResponseTime(responseTime);
       } else {
         let errorMsg = "Something went wrong";
         try {
@@ -679,132 +465,6 @@ class RAGAgent {
             </div>
         `;
     this.sessionId = this.generateSessionId();
-    this.updateSessionDisplay();
-  }
-
-  showUploadModal() {
-    if (this.elements.uploadModal) {
-      this.elements.uploadModal.style.display = "block";
-      this.elements.uploadProgress.style.display = "none";
-    }
-  }
-
-  hideUploadModal() {
-    if (this.elements.uploadModal) {
-      this.elements.uploadModal.style.display = "none";
-    }
-  }
-
-  // ✅ FIXED: Added token authentication
-  async handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!this.authToken) {
-      this.showNotification("Authentication required. Please login.", "error");
-      return;
-    }
-
-    this.elements.uploadProgress.style.display = "block";
-    this.elements.uploadArea.style.display = "none";
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await this.makeRequest("/upload/document/", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${this.authToken}`,
-        },
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        this.showNotification(
-          `Document uploaded successfully! ${data.chunks_created} chunks created.`,
-          "success"
-        );
-        this.hideUploadModal();
-      } else {
-        const error = await response.json();
-        this.showNotification(`Upload failed: ${error.error}`, "error");
-      }
-    } catch (error) {
-      this.showNotification(`Upload failed: ${error.message}`, "error");
-    } finally {
-      this.elements.uploadProgress.style.display = "none";
-      this.elements.uploadArea.style.display = "block";
-      this.elements.fileInput.value = "";
-    }
-  }
-
-  // ✅ FIXED: Added token authentication
-  async loadSystemStatus() {
-    try {
-      if (!this.authToken) {
-        console.log("No token available for system status");
-        return;
-      }
-
-      // Check API status
-      const apiResponse = await this.makeRequest("/health/", {
-        headers: {
-          "Authorization": `Bearer ${this.authToken}`,
-        },
-      });
-      
-      if (apiResponse.ok && this.elements.apiStatus) {
-        this.elements.apiStatus.textContent = "Online";
-        this.elements.apiStatus.className = "status-value online";
-      } else {
-        throw new Error("API not responding");
-      }
-
-      // Check knowledge base status
-      const kbResponse = await this.makeRequest("/knowledge-base/status/", {
-        headers: {
-          "Authorization": `Bearer ${this.authToken}`,
-        },
-      });
-      
-      if (kbResponse.ok) {
-        const kbData = await kbResponse.json();
-        this.elements.kbStatus.textContent = `${kbData.total_documents} documents`;
-        this.elements.kbStatus.className = "status-value online";
-      }
-
-      // Get session count
-      const sessionsResponse = await this.makeRequest("/sessions/", {
-        headers: {
-          "Authorization": `Bearer ${this.authToken}`,
-        },
-      });
-      
-      if (sessionsResponse.ok) {
-        const sessionsData = await sessionsResponse.json();
-        this.elements.sessionCount.textContent = sessionsData.count;
-      }
-    } catch (error) {
-      console.error("Error loading system status:", error);
-      if (this.elements.apiStatus) {
-        this.elements.apiStatus.textContent = "Offline";
-        this.elements.apiStatus.className = "status-value offline";
-      }
-      if (this.elements.kbStatus) {
-        this.elements.kbStatus.textContent = "Unknown";
-        this.elements.kbStatus.className = "status-value offline";
-      }
-    }
-  }
-
-  updateSessionDisplay() {
-    this.elements.sessionId.value = this.sessionId;
-  }
-
-  updateResponseTime(time) {
-    this.elements.responseTime.textContent = `${time.toFixed(2)}s`;
   }
 
   addToRecentQueries(query) {
@@ -814,6 +474,8 @@ class RAGAgent {
   }
 
   updateRecentQueries() {
+    if (!this.elements.recentQueries) return;
+    
     if (this.recentQueries.length === 0) {
       this.elements.recentQueries.innerHTML =
         '<p class="no-queries">No recent queries</p>';
@@ -881,7 +543,7 @@ class RAGAgent {
     const defaultHeaders = {};
     
     // Add Authorization header if token exists
-    if (this.authToken) {
+    if (this.authToken && this.authToken !== "None" && this.authToken.trim() !== "") {
       defaultHeaders["Authorization"] = `Bearer ${this.authToken}`;
     }
 
@@ -899,10 +561,6 @@ class RAGAgent {
       },
     };
 
-    // Update debug info
-    this.lastRequestTime = new Date().toLocaleTimeString();
-    this.updateDebugInfo();
-
     try {
       const response = await fetch(url, finalOptions);
       
@@ -916,681 +574,7 @@ class RAGAgent {
       
       return response;
     } catch (error) {
-      this.errorCount++;
-      this.updateDebugInfo();
       throw error;
-    }
-  }
-
-  // Dashboard Navigation
-  switchDashboardSection(sectionName) {
-    // Update navigation buttons
-    this.elements.navButtons.forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.section === sectionName);
-    });
-
-    // Show/hide sections
-    this.elements.dashboardSections.forEach((section) => {
-      section.classList.toggle(
-        "active",
-        section.id === `${sectionName}-section`
-      );
-    });
-  }
-
-  // Developer Dashboard Methods
-  toggleDeveloperMode() {
-    this.developerModeActive = !this.developerModeActive;
-    this.elements.developerMode.classList.toggle(
-      "active",
-      this.developerModeActive
-    );
-
-    if (this.developerModeActive) {
-      this.elements.developerToggle.innerHTML = '<i class="fas fa-times"></i>';
-      this.elements.developerToggle.title = "Close Developer Dashboard";
-    } else {
-      this.elements.developerToggle.innerHTML =
-        '<i class="fas fa-chart-line"></i>';
-      this.elements.developerToggle.title = "Developer Dashboard";
-    }
-  }
-
-  // ✅ FIXED: All dashboard methods now include token
-  async getMainDashboard() {
-    try {
-      const response = await this.makeRequest("/dashboard/");
-      const data = await response.json();
-
-      this.elements.mainDashboardOutput.style.display = "block";
-      this.elements.mainDashboardOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-
-      this.createMainDashboardChart(data);
-      this.showNotification("Complete dashboard loaded!", "success");
-    } catch (error) {
-      this.elements.mainDashboardOutput.style.display = "block";
-      this.elements.mainDashboardOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to load dashboard", "error");
-    }
-  }
-
-  async getTokenUsage() {
-    try {
-      const days = this.elements.tokenDays?.value || 30;
-      const sessionId = this.elements.tokenSessionId?.value || "";
-      const params = new URLSearchParams({ days });
-      if (sessionId) params.append("session_id", sessionId);
-
-      const response = await this.makeRequest(`/dashboard/tokens/?${params}`);
-      const data = await response.json();
-
-      this.elements.tokenUsageOutput.style.display = "block";
-      this.elements.tokenUsageOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-
-      this.createTokenUsageChart(data);
-      this.showNotification("Token usage retrieved!", "success");
-    } catch (error) {
-      this.elements.tokenUsageOutput.style.display = "block";
-      this.elements.tokenUsageOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get token usage", "error");
-    }
-  }
-
-  async getCostBreakdown() {
-    try {
-      const limit = this.elements.costLimit?.value || 10;
-      const order = this.elements.costOrder?.value || "cost";
-      const params = new URLSearchParams({ limit, order });
-
-      const response = await this.makeRequest(`/dashboard/costs/?${params}`);
-      const data = await response.json();
-
-      this.elements.costBreakdownOutput.style.display = "block";
-      this.elements.costBreakdownOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-      this.showNotification("Cost breakdown retrieved!", "success");
-    } catch (error) {
-      this.elements.costBreakdownOutput.style.display = "block";
-      this.elements.costBreakdownOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get cost breakdown", "error");
-    }
-  }
-
-  async getQueryAnalytics() {
-    try {
-      const days = this.elements.queryDays?.value || 7;
-      const params = new URLSearchParams({ days });
-
-      const response = await this.makeRequest(`/analytics/queries/?${params}`);
-      const data = await response.json();
-
-      this.elements.queryAnalyticsOutput.style.display = "block";
-      this.elements.queryAnalyticsOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-
-      this.createQueryAnalyticsChart(data);
-      this.showNotification("Query analytics retrieved!", "success");
-    } catch (error) {
-      this.elements.queryAnalyticsOutput.style.display = "block";
-      this.elements.queryAnalyticsOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get query analytics", "error");
-    }
-  }
-
-  async getDataSourceStats() {
-    try {
-      const response = await this.makeRequest("/analytics/sources/");
-      const data = await response.json();
-
-      this.elements.dataSourceOutput.style.display = "block";
-      this.elements.dataSourceOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-      this.showNotification("Data source stats retrieved!", "success");
-    } catch (error) {
-      this.elements.dataSourceOutput.style.display = "block";
-      this.elements.dataSourceOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get data source stats", "error");
-    }
-  }
-
-  async getSystemReport() {
-    try {
-      const response = await this.makeRequest("/reports/system/");
-      const data = await response.json();
-
-      this.elements.systemReportOutput.style.display = "block";
-      this.elements.systemReportOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-      this.showNotification("System report retrieved!", "success");
-    } catch (error) {
-      this.elements.systemReportOutput.style.display = "block";
-      this.elements.systemReportOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get system report", "error");
-    }
-  }
-
-  async getUsageReport() {
-    try {
-      const response = await this.makeRequest("/reports/usage/");
-      const data = await response.json();
-
-      this.elements.usageReportOutput.style.display = "block";
-      this.elements.usageReportOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-      this.showNotification("Usage report retrieved!", "success");
-    } catch (error) {
-      this.elements.usageReportOutput.style.display = "block";
-      this.elements.usageReportOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get usage report", "error");
-    }
-  }
-
-  async handleCsvUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await this.makeRequest("/upload/csv/", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-
-      this.elements.uploadOutput.style.display = "block";
-      this.elements.uploadOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("CSV uploaded successfully!", "success");
-    } catch (error) {
-      this.elements.uploadOutput.style.display = "block";
-      this.elements.uploadOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to upload CSV", "error");
-    }
-  }
-
-  async handleDocUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await this.makeRequest("/upload/document/", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-
-      this.elements.uploadOutput.style.display = "block";
-      this.elements.uploadOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Document uploaded successfully!", "success");
-    } catch (error) {
-      this.elements.uploadOutput.style.display = "block";
-      this.elements.uploadOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to upload document", "error");
-    }
-  }
-
-  async exportSqlQuery() {
-    const query = this.elements.sqlQuery?.value;
-    if (!query) {
-      this.showNotification("Please enter a SQL query", "error");
-      return;
-    }
-
-    try {
-      const response = await this.makeRequest("/export/sql/", {
-        method: "POST",
-        body: JSON.stringify({ query }),
-      });
-      const data = await response.json();
-
-      this.elements.sqlExportOutput.style.display = "block";
-      this.elements.sqlExportOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("SQL export completed!", "success");
-    } catch (error) {
-      this.elements.sqlExportOutput.style.display = "block";
-      this.elements.sqlExportOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to export SQL", "error");
-    }
-  }
-
-  async getHealthCheck() {
-    try {
-      const response = await this.makeRequest("/health/");
-      const data = await response.json();
-
-      this.elements.healthOutput.style.display = "block";
-      this.elements.healthOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Health check completed!", "success");
-    } catch (error) {
-      this.elements.healthOutput.style.display = "block";
-      this.elements.healthOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Health check failed", "error");
-    }
-  }
-
-  async processTestQuery() {
-    const query = this.elements.testQuery?.value;
-    const sessionId = this.elements.querySessionId?.value || this.sessionId;
-
-    if (!query) {
-      this.showNotification("Please enter a query", "error");
-      return;
-    }
-
-    try {
-      const response = await this.makeRequest("/query/", {
-        method: "POST",
-        body: JSON.stringify({
-          query: query,
-          session_id: sessionId,
-          use_web_search: true,
-          enhance_formatting: true,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.error || errorData.detail || errorMsg;
-        } catch {}
-        throw new Error(errorMsg);
-      }
-
-      const data = await response.json();
-      this.elements.queryOutput.style.display = "block";
-      this.elements.queryOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Query processed successfully!", "success");
-
-    } catch (error) {
-      this.elements.queryOutput.style.display = "block";
-      this.elements.queryOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Query processing failed", "error");
-    }
-  }
-
-  // Chart Creation Methods
-  createMainDashboardChart(data) {
-    const ctx = document.getElementById("mainDashboardChart");
-    if (!ctx) return;
-
-    if (this.charts.mainDashboard) {
-      this.charts.mainDashboard.destroy();
-    }
-
-    const labels = ["Total Queries", "Successful Queries", "Failed Queries"];
-    const values = [
-      data.total_queries || 0,
-      data.successful_queries || 0,
-      (data.total_queries || 0) - (data.successful_queries || 0),
-    ];
-
-    this.charts.mainDashboard = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            data: values,
-            backgroundColor: ["#667eea", "#38a169", "#e53e3e"],
-            borderWidth: 2,
-            borderColor: "#2d3748",
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            labels: {
-              color: "#e2e8f0",
-              font: {
-                size: 12,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  createTokenUsageChart(data) {
-    const ctx = document.getElementById("tokenUsageChart");
-    if (!ctx) return;
-
-    if (this.charts.tokenUsage) {
-      this.charts.tokenUsage.destroy();
-    }
-
-    const labels = ["Prompt Tokens", "Completion Tokens", "Total Tokens"];
-    const values = [
-      data.total_prompt_tokens || 0,
-      data.total_completion_tokens || 0,
-      data.total_tokens || 0,
-    ];
-
-    this.charts.tokenUsage = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: "Token Count",
-            data: values,
-            backgroundColor: ["#667eea", "#764ba2", "#38a169"],
-            borderColor: "#4a5568",
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: "#a0aec0",
-            },
-            grid: {
-              color: "#4a5568",
-            },
-          },
-          x: {
-            ticks: {
-              color: "#a0aec0",
-            },
-            grid: {
-              color: "#4a5568",
-            },
-          },
-        },
-        plugins: {
-          legend: {
-            labels: {
-              color: "#e2e8f0",
-              font: {
-                size: 12,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  createQueryAnalyticsChart(data) {
-    const ctx = document.getElementById("queryAnalyticsChart");
-    if (!ctx) return;
-
-    if (this.charts.queryAnalytics) {
-      this.charts.queryAnalytics.destroy();
-    }
-
-    const labels = ["SQL Queries", "RAG Queries", "Hybrid Queries"];
-    const values = [
-      data.sql_queries || 0,
-      data.rag_queries || 0,
-      data.hybrid_queries || 0,
-    ];
-
-    this.charts.queryAnalytics = new Chart(ctx, {
-      type: "pie",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            data: values,
-            backgroundColor: ["#667eea", "#38a169", "#d69e2e"],
-            borderWidth: 2,
-            borderColor: "#2d3748",
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            labels: {
-              color: "#e2e8f0",
-              font: {
-                size: 12,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  updateDebugInfo() {
-    if (this.elements.lastRequest) {
-      this.elements.lastRequest.textContent = `Last Request: ${
-        this.lastRequestTime || "None"
-      }`;
-    }
-    if (this.elements.errorCount) {
-      this.elements.errorCount.textContent = `Errors: ${this.errorCount}`;
-    }
-
-    if (this.elements.connectionStatus) {
-      this.elements.connectionStatus.innerHTML = `
-              <i class="fas fa-circle ${
-                this.errorCount > 0 ? "offline" : "online"
-              }"></i>
-              <span>Connection: ${this.errorCount > 0 ? "Issues" : "OK"}</span>
-          `;
-    }
-  }
-
-  async getMemoryForSession() {
-    const sessionId = this.elements.devSessionId.value || this.sessionId;
-    try {
-      const response = await this.makeRequest(`/memory/${sessionId}/`);
-      const data = await response.json();
-
-      this.elements.memoryOutput.style.display = "block";
-      this.elements.memoryOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Memory retrieved successfully!", "success");
-    } catch (error) {
-      this.elements.memoryOutput.style.display = "block";
-      this.elements.memoryOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get memory", "error");
-    }
-  }
-
-  async clearSessionMemory() {
-    const sessionId = this.elements.devSessionId.value || this.sessionId;
-    if (
-      !confirm(
-        `Are you sure you want to clear memory for session: ${sessionId}?`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const response = await this.makeRequest(`/memory/${sessionId}/`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        this.elements.memoryOutput.style.display = "block";
-        this.elements.memoryOutput.textContent = "Memory cleared successfully!";
-        this.showNotification("Memory cleared successfully!", "success");
-      } else {
-        throw new Error("Failed to clear memory");
-      }
-    } catch (error) {
-      this.elements.memoryOutput.style.display = "block";
-      this.elements.memoryOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to clear memory", "error");
-    }
-  }
-
-  async listAllSessions() {
-    try {
-      const response = await this.makeRequest("/sessions/");
-      const data = await response.json();
-
-      this.elements.memoryOutput.style.display = "block";
-      this.elements.memoryOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Sessions retrieved successfully!", "success");
-    } catch (error) {
-      this.elements.memoryOutput.style.display = "block";
-      this.elements.memoryOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get sessions", "error");
-    }
-  }
-
-  async getKnowledgeBaseStatus() {
-    try {
-      const response = await this.makeRequest("/knowledge-base/status/");
-      const data = await response.json();
-
-      this.elements.kbOutput.style.display = "block";
-      this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Knowledge base status retrieved!", "success");
-    } catch (error) {
-      this.elements.kbOutput.style.display = "block";
-      this.elements.kbOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get KB status", "error");
-    }
-  }
-
-  async reloadKnowledgeBase() {
-    if (
-      !confirm(
-        "Are you sure you want to reload the knowledge base? This may take a while."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      this.elements.reloadKb.classList.add("loading");
-      this.elements.reloadKb.disabled = true;
-
-      const response = await this.makeRequest("/knowledge-base/reload/", {
-        method: "POST",
-      });
-      const data = await response.json();
-
-      this.elements.kbOutput.style.display = "block";
-      this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Knowledge base reloaded successfully!", "success");
-
-      this.loadSystemStatus();
-    } catch (error) {
-      this.elements.kbOutput.style.display = "block";
-      this.elements.kbOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to reload knowledge base", "error");
-    } finally {
-      this.elements.reloadKb.classList.remove("loading");
-      this.elements.reloadKb.disabled = false;
-    }
-  }
-
-  async clearVectorStore() {
-    if (
-      !confirm(
-        "Are you sure you want to clear the vector store? This will delete ALL document data!"
-      )
-    ) {
-      return;
-    }
-
-    try {
-      this.elements.clearVectorStore.classList.add("loading");
-      this.elements.clearVectorStore.disabled = true;
-
-      const response = await this.makeRequest("/vectorstore/clear/", {
-        method: "DELETE",
-      });
-      const data = await response.json();
-
-      this.elements.kbOutput.style.display = "block";
-      this.elements.kbOutput.textContent = JSON.stringify(data, null, 2);
-      this.showNotification("Vector store cleared successfully!", "success");
-
-      this.loadSystemStatus();
-    } catch (error) {
-      this.elements.kbOutput.style.display = "block";
-      this.elements.kbOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to clear vector store", "error");
-    } finally {
-      this.elements.clearVectorStore.classList.remove("loading");
-      this.elements.clearVectorStore.disabled = false;
-    }
-  }
-
-  async getSystemMetrics() {
-    try {
-      const response = await this.makeRequest("/metrics/");
-      const data = await response.json();
-
-      this.elements.systemMetricsOutput.style.display = "block";
-      this.elements.systemMetricsOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-      this.showNotification("Metrics retrieved successfully!", "success");
-    } catch (error) {
-      this.elements.systemMetricsOutput.style.display = "block";
-      this.elements.systemMetricsOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to get metrics", "error");
-    }
-  }
-
-  async resetSystemMetrics() {
-    if (!confirm("Are you sure you want to reset all system metrics?")) {
-      return;
-    }
-
-    try {
-      const response = await this.makeRequest("/metrics/", { method: "POST" });
-      const data = await response.json();
-
-      this.elements.systemMetricsOutput.style.display = "block";
-      this.elements.systemMetricsOutput.textContent = JSON.stringify(
-        data,
-        null,
-        2
-      );
-      this.showNotification("Metrics reset successfully!", "success");
-    } catch (error) {
-      this.elements.systemMetricsOutput.style.display = "block";
-      this.elements.systemMetricsOutput.textContent = `Error: ${error.message}`;
-      this.showNotification("Failed to reset metrics", "error");
     }
   }
 

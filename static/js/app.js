@@ -132,6 +132,7 @@ class RAGAgent {
       sqlExportOutput: document.getElementById("sqlExportOutput"),
       // Monitoring section
       getHealthCheck: document.getElementById("getHealthCheck"),
+      healthOutput: document.getElementById("healthOutput"),
       getSystemMetrics: document.getElementById("getSystemMetrics"),
       resetSystemMetrics: document.getElementById("resetSystemMetrics"),
       systemMetricsOutput: document.getElementById("systemMetricsOutput"),
@@ -226,20 +227,15 @@ class RAGAgent {
     });
 
     // Developer dashboard events
-
-
-
-    if (this.elements.developerToggle) {
+    
       this.elements.developerToggle.addEventListener("click", () =>
         this.toggleDeveloperMode()
       );
-    }
-    if (this.elements.closeDeveloperMode) {
+    
+    
       this.elements.closeDeveloperMode.addEventListener("click", () =>
         this.toggleDeveloperMode()
       );
-    }
-
     
 
     // Navigation events
@@ -773,8 +769,8 @@ class RAGAgent {
           "Authorization": `Bearer ${this.authToken}`,
         },
       });
-      
-      if (kbResponse.ok) {
+
+      if (kbResponse.ok && this.elements.kbStatus) {
         const kbData = await kbResponse.json();
         this.elements.kbStatus.textContent = `${kbData.total_documents} documents`;
         this.elements.kbStatus.className = "status-value online";
@@ -786,8 +782,8 @@ class RAGAgent {
           "Authorization": `Bearer ${this.authToken}`,
         },
       });
-      
-      if (sessionsResponse.ok) {
+
+      if (sessionsResponse.ok && this.elements.sessionCount) {
         const sessionsData = await sessionsResponse.json();
         this.elements.sessionCount.textContent = sessionsData.count;
       }
@@ -805,11 +801,15 @@ class RAGAgent {
   }
 
   updateSessionDisplay() {
-    this.elements.sessionId.value = this.sessionId;
+    if (this.elements.sessionId) {
+      this.elements.sessionId.value = this.sessionId;
+    }
   }
 
   updateResponseTime(time) {
-    this.elements.responseTime.textContent = `${time.toFixed(2)}s`;
+    if (this.elements.responseTime) {
+      this.elements.responseTime.textContent = `${time.toFixed(2)}s`;
+    }
   }
 
   addToRecentQueries(query) {
@@ -819,6 +819,10 @@ class RAGAgent {
   }
 
   updateRecentQueries() {
+    if (!this.elements.recentQueries) {
+      return;
+    }
+
     if (this.recentQueries.length === 0) {
       this.elements.recentQueries.innerHTML =
         '<p class="no-queries">No recent queries</p>';

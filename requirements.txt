@@ -64,7 +64,8 @@ sentence-transformers==3.3.1
 # Uncomment if you want to enable web search:
 tavily-python==0.3.3
 djangorestframework-simplejwt==5.3.1
-
+pandasql
+rank-bm25
 
 # ============================================================================
 # NOT NEEDED (Removed)
@@ -76,4 +77,33 @@ djangorestframework-simplejwt==5.3.1
 # pytest-django==4.9.0
 # pytest-asyncio==0.24.0
 
+"""
+pip install \
+Django \
+djangorestframework \
+django-cors-headers \
+langchain \
+langchain-openai \
+langchain-community \
+langchain-chroma \
+openai \
+tiktoken \
+chromadb \
+pypdf \
+python-docx \
+pandas \
+pandasql \
+numpy \
+rank-bm25 \
+python-dotenv \
+pydantic \
+gunicorn \
+whitenoise \
+docling \
+docling-core \
+easyocr \
+sentence-transformers \
+tavily-python \
+djangorestframework-simplejwt
 
+"""
